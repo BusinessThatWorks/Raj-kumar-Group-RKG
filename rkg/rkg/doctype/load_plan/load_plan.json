@@ -1,0 +1,154 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:load_reference_no",
+ "creation": "2026-01-21 11:43:59.598445",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_xsar",
+  "payment_plan_date",
+  "column_break_iruw",
+  "dispatch_plan_date",
+  "column_break_esxg",
+  "date",
+  "section_break_nhtg",
+  "status",
+  "column_break_gxws",
+  "load_reference_no",
+  "section_break_ouca",
+  "load_items",
+  "amended_from",
+  "section_break_ekuq",
+  "total_qty"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_ouca",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "load_items",
+   "fieldtype": "Table",
+   "label": "Load Items",
+   "options": "Load Plan Item"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Load Plan",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "load_reference_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Load Reference No",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "dispatch_plan_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Dispatch Plan Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_plan_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Payment Plan Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_xsar",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_iruw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_esxg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_nhtg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Submitted\nPlanned\nIn-Transit\nReceived\nDispatched\nPartial Dispatched"
+  },
+  {
+   "fieldname": "column_break_gxws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "section_break_ekuq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_qty",
+   "fieldtype": "Int",
+   "label": "Total Quantity"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-21 17:21:59.568825",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Load Plan",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
