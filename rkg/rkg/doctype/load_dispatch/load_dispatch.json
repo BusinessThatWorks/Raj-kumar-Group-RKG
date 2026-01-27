@@ -1,0 +1,233 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format: LD-{load_reference_no}-{##}",
+ "creation": "2026-01-23 21:54:08.000842",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_information_section",
+  "load_dispatch_file_attach",
+  "load_reference_no_linked_to_load_plan",
+  "column_break_sryn",
+  "dispatch_no",
+  "invoice_no",
+  "warehouse_and_damage_assessment_section",
+  "warehouse",
+  "column_break_xerl",
+  "damage_assessment",
+  "quantity_summary_section",
+  "total_load_quantity",
+  "column_break_qxwf",
+  "total_dispatch_quantity",
+  "column_break_lgxu",
+  "total_receipt_quantity",
+  "total_billed_quantity",
+  "damage_summary_section",
+  "frames_ok",
+  "column_break_dhoj",
+  "frames_not_ok",
+  "items_section",
+  "items",
+  "status",
+  "section_break_ckta",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_ckta",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Load Dispatch",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "basic_information_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "load_dispatch_file_attach",
+   "fieldtype": "Attach",
+   "in_list_view": 1,
+   "label": "Load Dispatch File Attach",
+   "reqd": 1
+  },
+  {
+   "fieldname": "load_reference_no_linked_to_load_plan",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Load Reference No (Linked to load plan)",
+   "options": "Load Plan",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sryn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dispatch_no",
+   "fieldtype": "Data",
+   "label": "Dispatch No"
+  },
+  {
+   "fieldname": "invoice_no",
+   "fieldtype": "Data",
+   "label": "Invoice No"
+  },
+  {
+   "fieldname": "warehouse_and_damage_assessment_section",
+   "fieldtype": "Section Break",
+   "label": "Warehouse And Damage Assessment"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "column_break_xerl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "damage_assessment",
+   "fieldtype": "Data",
+   "label": "Damage Assessment"
+  },
+  {
+   "fieldname": "quantity_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Quantity Summary"
+  },
+  {
+   "bold": 1,
+   "fieldname": "total_load_quantity",
+   "fieldtype": "Int",
+   "label": "Total Load Quantity",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_qxwf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "total_dispatch_quantity",
+   "fieldtype": "Int",
+   "label": "Total Dispatch Quantity",
+   "no_copy": 1,
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_lgxu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "total_receipt_quantity",
+   "fieldtype": "Int",
+   "label": "Total Receipt Quantity",
+   "no_copy": 1,
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "total_billed_quantity",
+   "fieldtype": "Int",
+   "label": "Total Billed Quantity",
+   "no_copy": 1,
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "damage_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Damage Summary"
+  },
+  {
+   "bold": 1,
+   "description": "Frames marked 'OK' in Damage Assessment",
+   "fieldname": "frames_ok",
+   "fieldtype": "Int",
+   "label": "Frames OK",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dhoj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "description": "Frames marked 'OK' in Damage Assessment",
+   "fieldname": "frames_not_ok",
+   "fieldtype": "Int",
+   "label": "Frames Not OK",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Load Dispatch Item",
+   "options": "Load Dispatch Item"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "In-Transit\nReceived",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-24 14:04:51.824135",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Load Dispatch",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -13,14 +13,13 @@
    "fieldname": "attach_load_plan",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Attach Load Plan",
-   "reqd": 1
+   "label": "Attach Load Plan"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-21 14:55:34.441876",
+ "modified": "2026-01-22 10:19:25.675709",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Upload Load Plan",

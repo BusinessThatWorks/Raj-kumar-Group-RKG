@@ -82,11 +82,14 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "status",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Submitted\nPlanned\nIn-Transit\nReceived\nDispatched\nPartial Dispatched"
+   "options": "Submitted\nPlanned\nIn-Transit\nReceived\nDispatched\nPartial Dispatched",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_gxws",
@@ -112,7 +115,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-21 17:21:59.568825",
+ "modified": "2026-01-22 11:09:45.430114",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Load Plan",

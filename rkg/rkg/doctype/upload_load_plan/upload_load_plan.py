@@ -12,62 +12,42 @@ class UploadLoadPlan(Document):
 
 @frappe.whitelist()
 def process_csv(upload_doc):
-    upload = frappe.get_doc("Upload Load Plan", upload_doc)
+    upload_doc = frappe.get_doc("Upload Load Plan", upload_doc)
 
-    if not upload.attach_load_plan:
+    if not upload_doc.attach_load_plan:
         frappe.throw("Please attach CSV file")
 
-    file_doc = frappe.get_doc("File", {"file_url": upload.attach_load_plan})
-    content = file_doc.get_content()
+    file_doc = frappe.get_doc("File", {"file_url": upload_doc.attach_load_plan})
+    csv_content = file_doc.get_content()
 
-    reader = csv.DictReader(io.StringIO(content))
-
-    created = 0
-    updated = 0
-    rows_added = 0
-    total_qty = 0
-
-    load_plan_map = {}
+    import csv, io
+    reader = csv.DictReader(io.StringIO(csv_content))
 
     for row in reader:
-        ref = (row.get("Load Reference No") or "").strip()
+        load_reference_no = row.get("Load Reference No")
 
-        if not ref:
+        if not load_reference_no:
             continue
 
-        # Create or fetch Load Plan (NAME = Load Reference No)
-        if ref not in load_plan_map:
-            if frappe.db.exists("Load Plan", ref):
-                lp = frappe.get_doc("Load Plan", ref)
-                updated += 1
-            else:
-                lp = frappe.new_doc("Load Plan")
-                lp.load_reference_no = ref
-                lp.dispatch_plan_date = row.get("Dispatch Plan Date")
-                lp.payment_plan_date = row.get("Payment Plan Date")
-                total_qty =cint(row.get("Quantity"))
-                lp.total_qty = total_qty
-                
-                lp.insert(ignore_permissions=True)
-                created += 1
+        if frappe.db.exists("Load Plan", load_reference_no):
+            load_plan = frappe.get_doc("Load Plan", load_reference_no)
+            # existing qty (handle None)
+            existing_qty = load_plan.total_qty or 0
+            new_qty = int(row.get("Quantity") or 0)
 
-            load_plan_map[ref] = lp
+            load_plan.total_qty = existing_qty + new_qty
+            load_plan.status =  'Planned'
+            load_plan.save(ignore_permissions=True)
+        else:
+            load_plan = frappe.new_doc("Load Plan")
+            load_plan.name = load_reference_no
+            load_plan.load_reference_no = load_reference_no
+            load_plan.dispatch_plan_date = row.get("Dispatch Plan Date")
+            load_plan.payment_plan_date = row.get("Payment Plan Date")
+            load_plan.total_qty = int(row.get("Quantity") or 0)
+            load_plan.insert(ignore_permissions=True)
 
-        lp = load_plan_map[ref]
-
-        # Duplicate prevention
-        exists = any(
-            item.model == row.get("Model") and
-            item.variant == row.get("Variant") and
-            item.color == row.get("Color")
-            for item in lp.load_items
-        )
-
-        if exists:
-            continue
-
-
-        lp.append("load_items", {
+        load_plan.append("load_items", {
             "model": row.get("Model"),
             "model_name": row.get("Model Name"),
             "type": row.get("Type"),
@@ -75,20 +55,11 @@ def process_csv(upload_doc):
             "color": row.get("Color"),
             "group_color": row.get("Group Color"),
             "option": row.get("Option"),
-            "quantity": cint(row.get("Quantity"))
+            "quantity": int(row.get("Quantity") or 0)
         })
-		
-        rows_added += 1
 
-    for lp in load_plan_map.values():
-        lp.save(ignore_permissions=True)
+        load_plan.save(ignore_permissions=True)
 
     frappe.db.commit()
 
-    return (
-        f"CSV processed successfully<br>"
-        f"Load Plans Created: {created}<br>"
-        f"Load Plans Updated: {updated}<br>"
-        f"Rows Inserted: {rows_added}"
-    )
-
+    return "CSV uploaded successfully"
