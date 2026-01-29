@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{battery_serial_no}",
+ "creation": "2026-01-27 17:39:46.391644",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "battery_serial_no",
+  "battery_type",
+  "column_break_qdxv",
+  "battery_brand",
+  "status",
+  "spare_item",
+  "charging_information_section",
+  "charging_date",
+  "column_break_qqrg",
+  "battery_charging_date",
+  "section_break_exw3",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_exw3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Battery Information",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "battery_serial_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Battery Serial No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_qdxv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "battery_brand",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Battery Brand"
+  },
+  {
+   "fieldname": "battery_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Battery Type"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nDiscarded"
+  },
+  {
+   "default": "0",
+   "fieldname": "spare_item",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Spare Item"
+  },
+  {
+   "fieldname": "charging_information_section",
+   "fieldtype": "Section Break",
+   "label": "Charging Information"
+  },
+  {
+   "fieldname": "charging_date",
+   "fieldtype": "Date",
+   "label": "Charging Date"
+  },
+  {
+   "fieldname": "column_break_qqrg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "battery_charging_date",
+   "fieldtype": "Data",
+   "label": "Battery Charging Date"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-28 15:32:35.144666",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Battery Information",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

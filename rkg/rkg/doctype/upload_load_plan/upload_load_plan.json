@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "LN-.#####",
  "creation": "2026-01-21 14:52:42.350341",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -19,11 +18,10 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-22 10:19:25.675709",
+ "modified": "2026-01-28 12:29:36.481624",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Upload Load Plan",
- "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -35,6 +33,30 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Administrator",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Godown Incharge",
    "share": 1,
    "write": 1
   }

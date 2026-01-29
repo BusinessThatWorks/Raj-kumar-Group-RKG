@@ -1,0 +1,194 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{frame_no}",
+ "creation": "2026-01-27 18:18:32.007955",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "frame_information_section",
+  "item_code",
+  "frame_no",
+  "column_break_ubdc",
+  "key_number",
+  "warehouse",
+  "battery_details_section",
+  "battery_serial_no",
+  "battery_type",
+  "column_break_dckj",
+  "installation_date",
+  "aging_days",
+  "battery_actions_section",
+  "is_battery_expired",
+  "column_break_ucdx",
+  "discard_history_section",
+  "discard_history",
+  "swap_history_section",
+  "swap_history",
+  "section_break_2btd",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_2btd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Frame Bundle",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "frame_information_section",
+   "fieldtype": "Section Break",
+   "label": "Frame Information"
+  },
+  {
+   "description": "The item code associated with this frame",
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ubdc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Associated key number for this frame",
+   "fieldname": "key_number",
+   "fieldtype": "Data",
+   "label": "Key Number"
+  },
+  {
+   "description": "Unique frame number/identifier",
+   "fieldname": "frame_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Frame No",
+   "reqd": 1
+  },
+  {
+   "description": "Warehouse location of this frame (auto-updated from Serial No)",
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "battery_details_section",
+   "fieldtype": "Section Break",
+   "label": "Battery Details"
+  },
+  {
+   "fieldname": "battery_serial_no",
+   "fieldtype": "Link",
+   "label": "Battery Serial No",
+   "options": "Battery Information"
+  },
+  {
+   "fieldname": "battery_type",
+   "fieldtype": "Data",
+   "label": "Battery Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dckj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Date when the current battery was installed in this frame",
+   "fieldname": "installation_date",
+   "fieldtype": "Date",
+   "label": "Installation Date",
+   "read_only": 1
+  },
+  {
+   "description": "Number of days since the battery was installed (auto-calculated)",
+   "fieldname": "aging_days",
+   "fieldtype": "Int",
+   "label": "Aging Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "battery_actions_section",
+   "fieldtype": "Section Break",
+   "label": "Battery Actions"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Mark the current battery as discarded/expired",
+   "fieldname": "is_battery_expired",
+   "fieldtype": "Button",
+   "label": "Discard Battery"
+  },
+  {
+   "fieldname": "column_break_ucdx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "discard_history_section",
+   "fieldtype": "Section Break",
+   "label": "Discard History"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "History of discarded batteries for this frame (system-controlled)",
+   "fieldname": "discard_history",
+   "fieldtype": "Table",
+   "label": "Discard History",
+   "options": "Frame Bundle Discard History"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "swap_history_section",
+   "fieldtype": "Section Break",
+   "label": "Swap History"
+  },
+  {
+   "fieldname": "swap_history",
+   "fieldtype": "Table",
+   "label": "Swap History",
+   "options": "Frame Bundle Swap History"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-28 10:47:36.339436",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Frame Bundle",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
