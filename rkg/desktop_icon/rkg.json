@@ -1,0 +1,23 @@
+{
+ "app": "rkg",
+ "creation": "2026-02-02 12:29:57.038232",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "loader-pinwheel",
+ "icon_image": "/private/files/Screenshot from 2026-02-02 12-24-50-1.png",
+ "icon_type": "Link",
+ "idx": 1,
+ "label": "Rkg",
+ "link_to": "Rkg",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-02-02 12:35:57.793541",
+ "modified_by": "Administrator",
+ "name": "Rkg",
+ "owner": "Administrator",
+ "parent_icon": "ERPNext",
+ "restrict_removal": 0,
+ "roles": [],
+ "sidebar": "",
+ "standard": 1
+}

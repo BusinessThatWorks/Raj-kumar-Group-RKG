@@ -1,21 +1,24 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format: LD-{load_reference_no}-{##}",
  "creation": "2026-01-23 21:54:08.000842",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "basic_information_section",
+  "warehouse",
+  "column_break_fgnb",
   "load_dispatch_file_attach",
-  "load_reference_no_linked_to_load_plan",
-  "column_break_sryn",
+  "section_break_bcfh",
+  "linked_load_reference_no",
+  "section_break_qsyq",
   "dispatch_no",
+  "column_break_chyt",
   "invoice_no",
   "warehouse_and_damage_assessment_section",
-  "warehouse",
-  "column_break_xerl",
+  "column_break_cckk",
   "damage_assessment",
+  "column_break_xerl",
   "quantity_summary_section",
   "total_load_quantity",
   "column_break_qxwf",
@@ -61,24 +64,11 @@
    "reqd": 1
   },
   {
-   "fieldname": "load_reference_no_linked_to_load_plan",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Load Reference No (Linked to load plan)",
-   "options": "Load Plan",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_sryn",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "dispatch_no",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Dispatch No"
+   "label": "Dispatch No (manually has to be entered by user)"
   },
   {
    "fieldname": "invoice_no",
@@ -89,15 +79,14 @@
   },
   {
    "fieldname": "warehouse_and_damage_assessment_section",
-   "fieldtype": "Section Break",
-   "label": "Warehouse And Damage Assessment"
+   "fieldtype": "Section Break"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
-   "options": "Warehouse"
+   "options": "Warehouse",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_xerl",
@@ -130,7 +119,6 @@
    "fieldname": "total_dispatch_quantity",
    "fieldtype": "Int",
    "label": "Total Dispatch Quantity",
-   "no_copy": 1,
    "non_negative": 1,
    "read_only": 1
   },
@@ -176,6 +164,7 @@
   },
   {
    "bold": 1,
+   "depends_on": "\n",
    "description": "Frames marked 'OK' in Damage Assessment",
    "fieldname": "frames_not_ok",
    "fieldtype": "Int",
@@ -203,13 +192,42 @@
    "no_copy": 1,
    "options": "In-Transit\nReceived",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cckk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "linked_load_reference_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Load Reference No (Linked to load plan)",
+   "options": "Load Plan",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_fgnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_bcfh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_qsyq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_chyt",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 17:13:57.749158",
+ "modified": "2026-02-04 14:05:28.944311",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Load Dispatch",
@@ -248,6 +266,15 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "In-Transit"
+  },
+  {
+   "color": "Green",
+   "title": "Received"
+  }
+ ],
  "track_changes": 1
 }

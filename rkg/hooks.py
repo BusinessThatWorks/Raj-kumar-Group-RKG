@@ -11,15 +11,14 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "rkg",
-# 		"logo": "/assets/rkg/logo.png",
-# 		"title": "rkg",
-# 		"route": "/rkg",
-# 		"has_permission": "rkg.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "rkg",
+		"logo": "/assets/rkg/logo.png",
+		"title": "rkg",
+		"route": "/rkg"
+	}
+]
 
 # Includes in <head>
 # ------------------
@@ -140,6 +139,25 @@ app_license = "mit"
 # 	}
 # }
 
+doc_events = {
+    "User": {
+        "before_insert": "rkg.user_events.user_before_insert"
+    }
+}
+
+
+# doc_events = {
+#     "Purchase Receipt": {
+#         "on_submit": "rkg.utils.purchase_receipt.on_submit",
+#         "on_cancel": "rkg.utils.purchase_receipt.on_cancel"
+#     },
+#     "Purchase Invoice": {
+#         "on_submit": "rkg.utils.purchase_invoice.on_submit"
+#     }
+# }
+
+
+
 # Scheduled Tasks
 # ---------------
 
@@ -249,4 +267,30 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+fixtures = [
+    # existing (keep this)
+    {
+        "doctype": "Custom Field",
+        "filters": {
+            "module": "rkg"
+        }
+    },
+
+    # ✅ ADD THIS
+    {
+        "doctype": "Role",
+        "filters": {
+            "name": ["in", ["Godown Incharge"]]
+        }
+    },
+
+    # ✅ OPTIONAL – permissions
+    {
+        "doctype": "Custom DocPerm",
+        "filters": {
+            "role": "Godown Incharge"
+        }
+    }
+]
+
 

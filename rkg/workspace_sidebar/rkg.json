@@ -1,0 +1,101 @@
+{
+ "app": "rkg",
+ "creation": "2026-02-02 12:29:07.651923",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "loader-pinwheel",
+ "idx": 1,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_to": "Dealership",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "layout-list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Load Dispatch",
+   "link_to": "Load Dispatch",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "layout-list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Upload Load Plan",
+   "link_to": "Upload Load Plan",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "layout-list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Load Plan",
+   "link_to": "Load Plan",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "layout-list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list-collapse",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Stock Item",
+   "link_to": "Item",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "layout-list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Purchase Invoice",
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-02-02 17:10:59.248812",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Rkg",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Rkg"
+}

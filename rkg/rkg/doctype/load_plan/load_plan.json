@@ -120,7 +120,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 18:04:26.281263",
+ "modified": "2026-01-29 10:29:57.118629",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Load Plan",
@@ -174,11 +174,11 @@
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Orange",
+   "color": "Blue",
    "title": "Planned"
   },
   {
-   "color": "Blue",
+   "color": "Green",
    "title": "In-Transit"
   },
   {
