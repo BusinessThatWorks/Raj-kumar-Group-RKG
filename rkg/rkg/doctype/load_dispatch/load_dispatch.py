@@ -107,7 +107,7 @@ def read_dispatch_csv(file_url, warehouse=None):
         # CREATE ITEM MASTER IMMEDIATELY
         item = frappe.new_doc("Item")
         item.item_code = frame_no
-        item.item_name = frame_no
+        item.item_name = row["Model Variant"]
         item.item_group = row["Model Name"]
         item.stock_uom = row["Unit"]
         item.is_stock_item = 1
