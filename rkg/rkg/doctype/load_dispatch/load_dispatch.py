@@ -108,7 +108,19 @@ def read_dispatch_csv(file_url, warehouse=None):
         item = frappe.new_doc("Item")
         item.item_code = frame_no
         item.item_name = row["Model Variant"]
-        item.item_group = row["Model Name"]
+        #item.item_group = row["Model Name"]
+        item_group = row["Model Name"].strip()
+
+        if not frappe.db.exists("Item Group", item_group):
+            frappe.get_doc({
+                "doctype": "Item Group",
+                "item_group_name": item_group,
+                "parent_item_group": "All Item Groups",
+                "is_group": 0
+            }).insert(ignore_permissions=True)
+
+        item.item_group = item_group
+
         item.stock_uom = row["Unit"]
         item.is_stock_item = 1
         item.default_warehouse = warehouse
