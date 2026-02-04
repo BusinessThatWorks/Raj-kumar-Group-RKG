@@ -268,29 +268,45 @@ doc_events = {
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 fixtures = [
-    # existing (keep this)
+    # 1️⃣ Parent & child doctypes FIRST
+    {
+        "doctype": "DocType",
+        "filters": {"module": "rkg"}
+    },
+
+    # 2️⃣ Custom Fields
     {
         "doctype": "Custom Field",
-        "filters": {
-            "module": "rkg"
-        }
+        "filters": {"module": "rkg"}
     },
 
-    # ✅ ADD THIS
+    # 3️⃣ Property Setters (labels, reqd, hidden, etc.)
+    {
+        "doctype": "Property Setter"
+    },
+
+    # 4️⃣ Roles
     {
         "doctype": "Role",
-        "filters": {
-            "name": ["in", ["Godown Incharge"]]
-        }
+        "filters": {"name": ["in", ["Godown Incharge"]]}
     },
 
-    # ✅ OPTIONAL – permissions
+    # 5️⃣ Permissions
     {
         "doctype": "Custom DocPerm",
-        "filters": {
-            "role": "Godown Incharge"
-        }
+        "filters": {"role": "Godown Incharge"}
+    },
+
+    # 6️⃣ UI
+    {
+        "doctype": "Workspace",
+        "filters": {"module": "rkg"}
+    },
+    {
+        "doctype": "Page",
+        "filters": {"module": "rkg"}
     }
 ]
+
 
 
