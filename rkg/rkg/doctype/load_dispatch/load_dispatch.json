@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-01-23 21:54:08.000842",
+ "creation": "2026-02-05 12:08:55.654158",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -27,9 +27,9 @@
   "total_receipt_quantity",
   "total_billed_quantity",
   "damage_summary_section",
+  "frames_not_ok",
   "frames_ok",
   "column_break_dhoj",
-  "frames_not_ok",
   "items_section",
   "items",
   "status",
@@ -155,8 +155,7 @@
    "fieldname": "frames_ok",
    "fieldtype": "Int",
    "label": "Frames OK",
-   "non_negative": 1,
-   "read_only": 1
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_dhoj",
@@ -165,12 +164,11 @@
   {
    "bold": 1,
    "depends_on": "\n",
-   "description": "Frames marked 'OK' in Damage Assessment",
+   "description": "Frames marked 'Not OK' in Damage Assessment",
    "fieldname": "frames_not_ok",
    "fieldtype": "Int",
    "label": "Frames Not OK",
-   "non_negative": 1,
-   "read_only": 1
+   "non_negative": 1
   },
   {
    "fieldname": "items_section",
@@ -227,7 +225,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-04 14:05:28.944311",
+ "modified": "2026-02-05 16:43:21.334363",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Load Dispatch",

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:DA-{####}",
- "creation": "2026-01-27 17:06:05.094258",
+ "creation": "2026-02-05 12:08:55.965157",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -84,6 +84,7 @@
    "label": "Damaged Frames"
   },
   {
+   "depends_on": "eval:doc.load_dispatch",
    "fieldname": "damage_assessment_items",
    "fieldtype": "Table",
    "label": "Damage Assessment Items",
@@ -106,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 15:30:35.565769",
+ "modified": "2026-02-05 14:37:19.760669",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Damage Assessment",

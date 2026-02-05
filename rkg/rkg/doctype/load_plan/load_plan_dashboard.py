@@ -2,12 +2,12 @@ from frappe import _
 
 def get_data():
     return {
-        "fieldname": "custom_load_dispatch",
+        "fieldname": "linked_load_reference_no",
         "transactions": [
             {
-                "label": _("Purchase Receipt"),
+                "label": _("Load Dispatch"),
                 "items": [
-                    "Purchase Receipt"
+                    "Load Dispatch"
                 ],
             }
         ],

@@ -3,29 +3,13 @@ let LOAD_REFERENCE_NO = "";
 
 frappe.ui.form.on("Damage Assessment", {
 
-    setup(frm) {
-        // ✅ Unique frame filter
-        frm.set_query("frame_no", "damage_assessment_items", function () {
-
-            let selected_frames = (frm.doc.damage_assessment_items || [])
-                .map(r => r.frame_no)
-                .filter(Boolean);
-
-            return {
-                filters: [
-                    ["Item", "item_code", "in", AVAILABLE_FRAMES],
-                    ["Item", "item_code", "not in", selected_frames]
-                ]
-            };
-        });
-    },
-
     refresh(frm) {
         toggle_child_table(frm);
     },
 
     load_dispatch(frm) {
 
+        // 🔁 Reset if cleared
         if (!frm.doc.load_dispatch) {
             AVAILABLE_FRAMES = [];
             LOAD_REFERENCE_NO = "";
@@ -39,7 +23,9 @@ frappe.ui.form.on("Damage Assessment", {
 
         frappe.call({
             method: "rkg.rkg.doctype.damage_assessment.damage_assessment.get_items_from_load_dispatch",
-            args: { load_dispatch: frm.doc.load_dispatch },
+            args: {
+                load_dispatch: frm.doc.load_dispatch
+            },
             callback(res) {
                 if (!res.message) return;
 
@@ -62,20 +48,40 @@ frappe.ui.form.on("Damage Assessment Item", {
     frame_no(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
-        // ✅ auto set load reference number
+        // ✅ Set Load Reference Number automatically
         row.load_reference_number = LOAD_REFERENCE_NO;
-
         frm.refresh_field("damage_assessment_items");
     },
 
-    estimated_amount(frm, cdt, cdn) {
-        // ✅ currency editable + ₹ symbol works
+    estimated_amount(frm) {
         calculate_total_estimated_cost(frm);
     },
 
     damage_assessment_items_remove(frm) {
         calculate_total_estimated_cost(frm);
-        frm.refresh_field("damage_assessment_items"); // 🔑 important
+    }
+});
+
+
+/* ============================================================
+   LINK FILTER FOR FRAME NO (UNIQUE SELECTION)
+   ============================================================ */
+
+frappe.ui.form.on("Damage Assessment", {
+    setup(frm) {
+        frm.set_query("frame_no", "damage_assessment_items", function () {
+
+            let selected_frames = (frm.doc.damage_assessment_items || [])
+                .map(r => r.frame_no)
+                .filter(Boolean);
+
+            return {
+                filters: [
+                    ["Item", "item_code", "in", AVAILABLE_FRAMES],
+                    ["Item", "item_code", "not in", selected_frames]
+                ]
+            };
+        });
     }
 });
 
