@@ -13,7 +13,7 @@ def get_filter_options(doctype):
         load_refs = [r.load_reference_no for r in frappe.get_all("Load Plan", fields=["load_reference_no"], distinct=True) if r.load_reference_no]
     elif doctype == "Load Dispatch":
         statuses = [r.status for r in frappe.get_all("Load Dispatch", fields=["status"], distinct=True) if r.status]
-        load_refs = [r.load_reference_no_linked_to_load_plan for r in frappe.get_all("Load Dispatch", fields=["load_reference_no_linked_to_load_plan"], distinct=True) if r.load_reference_no_linked_to_load_plan]
+        load_refs = [r.linked_load_reference_no for r in frappe.get_all("Load Dispatch", fields=["linked_load_reference_no"], distinct=True) if r.linked_load_reference_no]
 
     return {"statuses": sorted(list(set(statuses))), "load_references": sorted(list(set(load_refs)))}
 
@@ -49,7 +49,7 @@ def get_dashboard_data(doctype, status=None, load_reference=None, from_date=None
                 SELECT SUM(quantity) FROM `tabLoad Plan Item` WHERE parent=%s
             """, plan.name)[0][0] or 0)
             dispatched = flt(frappe.db.sql("""
-                SELECT SUM(total_dispatch_quantity) FROM `tabLoad Dispatch` WHERE load_reference_no_linked_to_load_plan=%s
+                SELECT SUM(total_dispatch_quantity) FROM `tabLoad Dispatch` WHERE linked_load_reference_no=%s
             """, plan.load_reference_no)[0][0] or 0)
 
             plan["total_quantity"] = total_qty
@@ -59,13 +59,13 @@ def get_dashboard_data(doctype, status=None, load_reference=None, from_date=None
 
     elif doctype == "Load Dispatch":
         dispatches = frappe.get_all("Load Dispatch", fields=[
-            "name", "dispatch_no", "load_reference_no_linked_to_load_plan", "status", "invoice_no",
+            "name", "dispatch_no", "linked_load_reference_no", "status", "invoice_no",
             "total_load_quantity", "total_dispatch_quantity", "total_receipt_quantity",
             "total_billed_quantity"
         ], filters=filters)
 
         if load_reference:
-            dispatches = [d for d in dispatches if d.load_reference_no_linked_to_load_plan == load_reference]
+            dispatches = [d for d in dispatches if d.linked_load_reference_no == load_reference]
 
         # Update total_receipt_quantity from Purchase Receipt
         for d in dispatches:

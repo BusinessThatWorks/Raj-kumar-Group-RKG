@@ -328,7 +328,7 @@ class LoadPlanDashboard {
 			html += `
 			<tr>
 				<td>${d.dispatch_no}</td>
-				<td>${d.load_reference_no_linked_to_load_plan}</td>
+				<td>${d.linked_load_reference_no}</td>
 				<td>${d.status}</td>
 				<td>${d.total_dispatch_quantity}</td>
 				<td>${d.total_receipt_quantity}</td>

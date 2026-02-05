@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "octicon octicon-graph",
  "idx": 0,
- "modified": "2026-02-03 11:21:46.483722",
+ "modified": "2026-02-05 10:53:12.172359",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "load-plan-dashboard",
@@ -14,6 +14,9 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Godown Incharge"
   }
  ],
  "script": null,

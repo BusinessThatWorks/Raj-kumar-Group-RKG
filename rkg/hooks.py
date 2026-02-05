@@ -139,11 +139,6 @@ add_to_apps_screen = [
 # 	}
 # }
 
-doc_events = {
-    "User": {
-        "before_insert": "rkg.user_events.user_before_insert"
-    }
-}
 
 
 # doc_events = {
