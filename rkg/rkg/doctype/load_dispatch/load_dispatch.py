@@ -231,11 +231,50 @@ def read_dispatch_csv(file_url, warehouse=None):
 #         })
 
 #     pr.insert(ignore_permissions=True)
+# #     return pr.name
+# @frappe.whitelist()
+# def create_purchase_receipt(load_dispatch):
+#     ld = frappe.get_doc("Load Dispatch", load_dispatch)
+
+#     if ld.docstatus != 1:
+#         frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
+
+#     if frappe.db.exists("Purchase Receipt", {"custom_load_dispatch": ld.name}):
+#         frappe.throw("Purchase Receipt already created for this Load Dispatch")
+
+#     supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
+#     if not supplier:
+#         frappe.throw("Default Supplier not set in RKG Settings")
+
+#     if not ld.warehouse:
+#         frappe.throw("Warehouse not set in Load Dispatch")
+
+#     pr = frappe.new_doc("Purchase Receipt")
+#     pr.supplier = supplier
+#     pr.posting_date = getdate()
+#     pr.custom_load_dispatch = ld.name
+#     pr.custom_load_reference = ld.linked_load_reference_no
+#     pr.set_warehouse = ld.warehouse
+
+#     for d in ld.items:
+#         pr.append("items", {
+#             "item_code": d.item_code,
+#             "qty": d.qty,
+#             "rate": d.rate,
+#             "warehouse": ld.warehouse
+#         })
+
+#     pr.insert(ignore_permissions=True)
+#     pr.submit()
+
 #     return pr.name
+
 @frappe.whitelist()
 def create_purchase_receipt(load_dispatch):
+    # Get Load Dispatch document
     ld = frappe.get_doc("Load Dispatch", load_dispatch)
 
+    # Validation
     if ld.docstatus != 1:
         frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
 
@@ -249,6 +288,7 @@ def create_purchase_receipt(load_dispatch):
     if not ld.warehouse:
         frappe.throw("Warehouse not set in Load Dispatch")
 
+    # Create Purchase Receipt
     pr = frappe.new_doc("Purchase Receipt")
     pr.supplier = supplier
     pr.posting_date = getdate()
@@ -267,8 +307,19 @@ def create_purchase_receipt(load_dispatch):
     pr.insert(ignore_permissions=True)
     pr.submit()
 
-    return pr.name
+    # Update Load Dispatch status to "Received"
+    ld.status = "Received"
+    ld.save(ignore_permissions=True)
+    frappe.db.commit()
 
+    # Update Load Plan status to "Received"
+    if ld.linked_load_reference_no:
+        lp = frappe.get_doc("Load Plan", ld.linked_load_reference_no)
+        lp.status = "Received"
+        lp.save(ignore_permissions=True)
+        frappe.db.commit()
+
+    return pr.name
 
 # =====================================================
 # GET ITEMS FROM LOAD DISPATCH
