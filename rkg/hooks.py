@@ -151,6 +151,15 @@ add_to_apps_screen = [
 #     }
 # }
 
+doc_events = {
+    "Purchase Invoice": {
+        "autoname": "rkg.utils.pi_naming.autoname",
+    }
+}
+
+
+
+
 
 
 # Scheduled Tasks
@@ -263,43 +272,67 @@ add_to_apps_screen = [
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 fixtures = [
-    # 1️⃣ Parent & child doctypes FIRST
+
+    # -------------------------------------------------
+    # 1️⃣ Custom DocTypes (parent + child)
+    # -------------------------------------------------
     {
         "doctype": "DocType",
-        "filters": {"module": "rkg"}
+        "filters": [
+            ["module", "=", "rkg"]
+        ]
     },
 
-    # 2️⃣ Custom Fields
+    # -------------------------------------------------
+    # 2️⃣ Custom Fields (CORE + CUSTOM doctypes)
+    # -------------------------------------------------
     {
         "doctype": "Custom Field",
-        "filters": {"module": "rkg"}
+        "filters": [
+            ["dt", "in", [
+                "Item",
+                "Purchase Receipt",
+                "Purchase Invoice",
+                "Load Dispatch",
+                "Load Plan"
+            ]]
+        ]
     },
 
-    # 3️⃣ Property Setters (labels, reqd, hidden, etc.)
-    {
-        "doctype": "Property Setter"
-    },
-
-    # 4️⃣ Roles
+    # -------------------------------------------------
+    # 3️⃣ Roles
+    # -------------------------------------------------
     {
         "doctype": "Role",
-        "filters": {"name": ["in", ["Godown Incharge"]]}
+        "filters": [
+            ["name", "in", ["Godown Incharge"]]
+        ]
     },
 
-    # 5️⃣ Permissions
+    # -------------------------------------------------
+    # 4️⃣ Permissions
+    # -------------------------------------------------
     {
         "doctype": "Custom DocPerm",
-        "filters": {"role": "Godown Incharge"}
+        "filters": [
+            ["role", "=", "Godown Incharge"]
+        ]
     },
 
-    # 6️⃣ UI
+    # -------------------------------------------------
+    # 5️⃣ UI / Desk
+    # -------------------------------------------------
     {
         "doctype": "Workspace",
-        "filters": {"module": "rkg"}
+        "filters": [
+            ["module", "=", "rkg"]
+        ]
     },
     {
         "doctype": "Page",
-        "filters": {"module": "rkg"}
+        "filters": [
+            ["module", "=", "rkg"]
+        ]
     }
 ]
 

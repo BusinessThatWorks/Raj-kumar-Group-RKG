@@ -65,21 +65,21 @@ function render_load_dispatch_buttons(frm) {
                 if (pr_res.message && pr_res.message.name) {
                     let pr_name = pr_res.message.name;
 
-                    frm.add_custom_button(
-                        `Open PR (${ld.name})`,
-                        () => frappe.set_route("Form", "Purchase Receipt", pr_name),
-                        "Load Dispatch"
-                    );
+                    // frm.add_custom_button(
+                    //     `Open PR (${ld.name})`,
+                    //     () => frappe.set_route("Form", "Purchase Receipt", pr_name),
+                    //     "Load Dispatch"
+                    // );
 
-                    frm.add_custom_button(
-                        `Open PI (${ld.name})`,
-                        () => frappe.set_route(
-                            "List",
-                            "Purchase Invoice",
-                            { purchase_receipt: pr_name }
-                        ),
-                        "Load Dispatch"
-                    );
+                    // frm.add_custom_button(
+                    //     `Open PI (${ld.name})`,
+                    //     () => frappe.set_route(
+                    //         "List",
+                    //         "Purchase Invoice",
+                    //         { purchase_receipt: pr_name }
+                    //     ),
+                    //     "Load Dispatch"
+                    // );
                 } else {
                     frm.add_custom_button(
                         `Create PR (${ld.name})`,

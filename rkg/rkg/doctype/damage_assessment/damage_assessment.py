@@ -9,13 +9,12 @@ class DamageAssessment(Document):
         self.update_load_dispatch_frame_counts()
 
     def on_trash(self):
-        # Recalculate when a Damage Assessment is deleted
         self.update_load_dispatch_frame_counts(force=True)
 
     def update_load_dispatch_frame_counts(self, force=False):
         """
         Update OK / Not OK frame counts in linked Load Dispatch.
-        Counts are DB-authoritative (not form-based).
+        DB authoritative.
         """
 
         if not self.load_dispatch:
@@ -25,7 +24,7 @@ class DamageAssessment(Document):
             return
 
         # ------------------------------------------------
-        # 1️⃣ Get ALL Damage Assessments for this Load Dispatch
+        # Get all Damage Assessments for this Load Dispatch
         # ------------------------------------------------
         da_names = frappe.get_all(
             "Damage Assessment",
@@ -33,9 +32,6 @@ class DamageAssessment(Document):
             pluck="name"
         )
 
-        # ------------------------------------------------
-        # 2️⃣ If no assessments exist → reset counts
-        # ------------------------------------------------
         if not da_names:
             frappe.db.set_value(
                 "Load Dispatch",
@@ -49,7 +45,7 @@ class DamageAssessment(Document):
             return
 
         # ------------------------------------------------
-        # 3️⃣ Count NOT OK frames (DB-level)
+        # Count frames
         # ------------------------------------------------
         not_ok_count = frappe.db.count(
             "Damage Assessment Item",
@@ -60,9 +56,6 @@ class DamageAssessment(Document):
             }
         )
 
-        # ------------------------------------------------
-        # 4️⃣ Count OK frames (DB-level)
-        # ------------------------------------------------
         ok_count = frappe.db.count(
             "Damage Assessment Item",
             filters={
@@ -72,9 +65,6 @@ class DamageAssessment(Document):
             }
         )
 
-        # ------------------------------------------------
-        # 5️⃣ Update Load Dispatch
-        # ------------------------------------------------
         frappe.db.set_value(
             "Load Dispatch",
             self.load_dispatch,
@@ -87,15 +77,16 @@ class DamageAssessment(Document):
 
 
 # ============================================================
-# API: Frames available for Damage Assessment
+# API: Frames + Accepted Warehouse from PR
 # ============================================================
 
 @frappe.whitelist()
 def get_items_from_load_dispatch(load_dispatch):
     """
-    Return frame numbers from Load Dispatch
-    EXCLUDING frames already marked NOT OK
-    across ALL Damage Assessments.
+    Return:
+    - Available frames (excluding Not OK)
+    - Load Reference Number
+    - Accepted Warehouse from Purchase Receipt
     """
 
     if not frappe.db.exists("Load Dispatch", load_dispatch):
@@ -104,7 +95,19 @@ def get_items_from_load_dispatch(load_dispatch):
     ld = frappe.get_doc("Load Dispatch", load_dispatch)
 
     # ------------------------------------------------
-    # 1️⃣ Get all Damage Assessments for this Load Dispatch
+    # Accepted Warehouse from Purchase Receipt
+    # ------------------------------------------------
+    accepted_warehouse = frappe.db.get_value(
+        "Purchase Receipt",
+        {
+            "custom_load_dispatch": load_dispatch,
+            "docstatus": 1
+        },
+        "set_warehouse"
+    )
+
+    # ------------------------------------------------
+    # Get all Damage Assessments for this Load Dispatch
     # ------------------------------------------------
     da_names = frappe.get_all(
         "Damage Assessment",
@@ -113,7 +116,7 @@ def get_items_from_load_dispatch(load_dispatch):
     )
 
     # ------------------------------------------------
-    # 2️⃣ Get NOT OK frames (DB-authoritative)
+    # Frames already marked NOT OK
     # ------------------------------------------------
     not_ok_frames = set()
 
@@ -131,7 +134,7 @@ def get_items_from_load_dispatch(load_dispatch):
         )
 
     # ------------------------------------------------
-    # 3️⃣ Return only AVAILABLE frames
+    # Available frames
     # ------------------------------------------------
     items = []
     for row in ld.items:
@@ -142,5 +145,6 @@ def get_items_from_load_dispatch(load_dispatch):
 
     return {
         "load_reference_number": ld.linked_load_reference_no,
+        "accepted_warehouse": accepted_warehouse,
         "items": items
     }
