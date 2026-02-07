@@ -21,7 +21,6 @@ def autoname(doc, method=None):
     if not fy:
         frappe.throw("Fiscal Year not found")
 
-    # 🔹 Convert 2025-2026 → 2526
     fy_code = f"{str(fy['year_start_date'].year)[-2:]}{str(fy['year_end_date'].year)[-2:]}"
 
     prefix = f"{base}-{fy_code}-"
