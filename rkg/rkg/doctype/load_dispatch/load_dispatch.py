@@ -295,66 +295,85 @@ def read_dispatch_csv(file_url, warehouse=None):
 
 @frappe.whitelist()
 def create_purchase_receipt(load_dispatch):
+    try:
+        ld = frappe.get_doc("Load Dispatch", load_dispatch)
 
-    ld = frappe.get_doc("Load Dispatch", load_dispatch)
+        # ------------------------------------------------
+        # VALIDATIONS
+        # ------------------------------------------------
+        if ld.docstatus != 1:
+            frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
 
-    # ------------------------------------------------
-    # VALIDATIONS
-    # ------------------------------------------------
-    if ld.docstatus != 1:
-        frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
+        if frappe.db.exists("Purchase Receipt", {"custom_load_dispatch": ld.name}):
+            frappe.throw("Purchase Receipt already created for this Load Dispatch")
 
-    if frappe.db.exists("Purchase Receipt", {"custom_load_dispatch": ld.name}):
-        frappe.throw("Purchase Receipt already created for this Load Dispatch")
+        supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
+        if not supplier:
+            frappe.throw("Default Supplier not set in RKG Settings")
 
-    supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
-    if not supplier:
-        frappe.throw("Default Supplier not set in RKG Settings")
+        if not ld.warehouse:
+            frappe.throw("Warehouse not set in Load Dispatch")
 
-    if not ld.warehouse:
-        frappe.throw("Warehouse not set in Load Dispatch")
+        # ------------------------------------------------
+        # CREATE PURCHASE RECEIPT
+        # ------------------------------------------------
+        pr = frappe.new_doc("Purchase Receipt")
+        pr.supplier = supplier
+        pr.posting_date = getdate()
+        pr.set_warehouse = ld.warehouse
 
-    # ------------------------------------------------
-    # CREATE PURCHASE RECEIPT
-    # ------------------------------------------------
-    pr = frappe.new_doc("Purchase Receipt")
-    pr.supplier = supplier
-    pr.posting_date = getdate()
-    pr.custom_load_dispatch = ld.name
-    if pr.meta.has_field("custom_load_reference"):
-        pr.custom_load_reference = ld.linked_load_reference_no
+        # Custom fields (safe)
+        if pr.meta.has_field("custom_load_dispatch"):
+            pr.custom_load_dispatch = ld.name
 
-    pr.set_warehouse = ld.warehouse
+        if pr.meta.has_field("custom_load_reference"):
+            pr.custom_load_reference = ld.linked_load_reference_no
 
-    for d in ld.items:
-        pr.append("items", {
-            "item_code": d.item_code,
-            "qty": d.qty,
-            "rate": d.rate,
-            "warehouse": ld.warehouse
-        })
+        # 🔥 REQUIRED BY INDIA COMPLIANCE (GST)
+        # Vendor Document Reference
+        pr.supplier_delivery_note = ld.name
 
-    pr.insert(ignore_permissions=True)
-    pr.submit()
+        # ------------------------------------------------
+        # ITEMS
+        # ------------------------------------------------
+        for d in ld.items:
+            pr.append("items", {
+                "item_code": d.item_code,
+                "qty": d.qty,
+                "rate": d.rate,
+                "warehouse": ld.warehouse
+            })
 
-    # ------------------------------------------------
-    # ✅ IMPORTANT: RECEIPT COUNT = 1 (NOT QTY)
-    # ------------------------------------------------
-    ld.db_set("total_receipt_quantity", 1)
-    ld.db_set("status", "Received")
+        pr.insert(ignore_permissions=True)
+        pr.submit()
 
-    # ------------------------------------------------
-    # UPDATE LOAD PLAN STATUS
-    # ------------------------------------------------
-    if ld.linked_load_reference_no:
-        frappe.db.set_value(
-            "Load Plan",
-            ld.linked_load_reference_no,
-            "status",
-            "Received"
+        # ------------------------------------------------
+        # UPDATE LOAD DISPATCH
+        # ------------------------------------------------
+        ld.db_set("total_receipt_quantity", 1)
+        ld.db_set("status", "Received")
+
+        # ------------------------------------------------
+        # UPDATE LOAD PLAN
+        # ------------------------------------------------
+        if ld.linked_load_reference_no:
+            frappe.db.set_value(
+                "Load Plan",
+                ld.linked_load_reference_no,
+                "status",
+                "Received"
+            )
+
+        return pr.name
+
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Create Purchase Receipt Failed"
         )
-
-    return pr.name
+        frappe.throw(
+            "Purchase Receipt creation failed. Please check Error Log."
+        )
 
 # =====================================================
 # GET ITEMS FROM LOAD DISPATCH
