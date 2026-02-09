@@ -163,6 +163,7 @@ def read_dispatch_csv(file_url, warehouse=None):
         item.custom_color = row["Colour"]
         item.custom_tax_rate = row["Tax Rate"]
         item.custom_dor = getdate(row["DOR"])
+        item.gst_hsn_code = row["HSN Code"]
         item.custom_hsn_code = row["HSN Code"]
 
         item.insert(ignore_permissions=True)
