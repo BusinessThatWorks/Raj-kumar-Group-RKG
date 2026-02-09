@@ -321,7 +321,9 @@ def create_purchase_receipt(load_dispatch):
     pr.supplier = supplier
     pr.posting_date = getdate()
     pr.custom_load_dispatch = ld.name
-    pr.custom_load_reference = ld.linked_load_reference_no
+    if pr.meta.has_field("custom_load_reference"):
+        pr.custom_load_reference = ld.linked_load_reference_no
+
     pr.set_warehouse = ld.warehouse
 
     for d in ld.items:
