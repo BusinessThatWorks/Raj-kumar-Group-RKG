@@ -289,7 +289,9 @@ fixtures = [
                 "Purchase Receipt",
                 "Purchase Invoice",
                 "Load Dispatch",
-                "Load Plan"
+                "Load Plan",
+                "Warehouse",
+                "Journal Entry"
             ]]
         ]
     },
