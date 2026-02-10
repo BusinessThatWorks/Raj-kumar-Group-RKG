@@ -82,6 +82,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
@@ -225,7 +226,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 16:43:21.334363",
+ "modified": "2026-02-10 11:10:02.949670",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Load Dispatch",

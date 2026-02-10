@@ -10,6 +10,11 @@ from frappe.utils import now_datetime, getdate
 # =====================================================
 # LOAD DISPATCH DOC
 # =====================================================
+import frappe
+from frappe.model.document import Document
+from frappe.utils import now_datetime
+
+
 class LoadDispatch(Document):
 
     def autoname(self):
@@ -17,9 +22,11 @@ class LoadDispatch(Document):
         self.name = f"LD-{dt.strftime('%Y%m%d-%H%M%S')}"
 
     def validate(self):
+        # 1️⃣ Items mandatory
         if not self.items:
             frappe.throw("Load Dispatch Items cannot be empty")
 
+        # 2️⃣ Dispatch qty validation
         if (
             self.total_dispatch_quantity
             and self.total_load_quantity
@@ -30,7 +37,26 @@ class LoadDispatch(Document):
                 f"cannot exceed Load Plan Qty ({self.total_load_quantity})"
             )
 
+    def before_submit(self):
+        self.validate_warehouse_on_submit()
+
+    def validate_warehouse_on_submit(self):
+        """
+        Warehouse is NOT allowed on submit
+        EXCEPTION:
+        Allow submit if total_receipt_quantity == 0
+        """
+
+        total_receipt_qty = self.total_receipt_quantity or 0
+
+        if self.warehouse and total_receipt_qty > 0:
+            frappe.throw(
+                "Warehouse is not allowed on Submit when Receipt Quantity exists.",
+                title="Warehouse Validation"
+            )
+
     def on_submit(self):
+        # 3️⃣ Update linked Load Plan status
         if self.linked_load_reference_no:
             frappe.db.set_value(
                 "Load Plan",
@@ -39,6 +65,7 @@ class LoadDispatch(Document):
                 "In-Transit"
             )
 
+        # 4️⃣ Update self status
         self.db_set("status", "In-Transit")
 
 
@@ -231,68 +258,6 @@ def read_dispatch_csv(file_url, warehouse=None):
         "items": items
     }
 
-
-# =====================================================
-# CREATE PURCHASE RECEIPT
-# =====================================================
-@frappe.whitelist()
-# def create_purchase_receipt(load_dispatch):
-
-#     ld = frappe.get_doc("Load Dispatch", load_dispatch)
-
-#     if ld.docstatus != 1:
-#         frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
-
-#     if frappe.db.exists("Purchase Receipt", {"custom_load_dispatch": ld.name}):
-#         frappe.throw("Purchase Receipt already created for this Load Dispatch")
-
-#     supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
-#     if not supplier:
-#         frappe.throw("Default Supplier not set in RKG Settings")
-
-#     if not ld.warehouse:
-#         frappe.throw("Warehouse not set in Load Dispatch")
-
-#     pr = frappe.new_doc("Purchase Receipt")
-#     pr.supplier = supplier
-#     pr.posting_date = getdate()
-#     pr.custom_load_dispatch = ld.name
-#     pr.custom_load_reference = ld.linked_load_reference_no
-#     pr.set_warehouse = ld.warehouse
-
-#     total_received_qty = 0
-
-#     for d in ld.items:
-#         pr.append("items", {
-#             "item_code": d.item_code,
-#             "qty": d.qty,
-#             "rate": d.rate,
-#             "warehouse": ld.warehouse
-#         })
-#         total_received_qty += d.qty
-
-#     pr.insert(ignore_permissions=True)
-#     pr.submit()
-
-#     # ------------------------------------------------
-#     # ✅ UPDATE LOAD DISPATCH (IMPORTANT FIX)
-#     # ------------------------------------------------
-#     ld.db_set("total_receipt_quantity", total_received_qty)
-#     ld.db_set("status", "Received")
-
-#     # ------------------------------------------------
-#     # Update Load Plan
-#     # ------------------------------------------------
-#     if ld.linked_load_reference_no:
-#         frappe.db.set_value(
-#             "Load Plan",
-#             ld.linked_load_reference_no,
-#             "status",
-#             "Received"
-#         )
-
-#     return pr.name
-
 @frappe.whitelist()
 def create_purchase_receipt(load_dispatch):
     try:
@@ -304,8 +269,15 @@ def create_purchase_receipt(load_dispatch):
         if ld.docstatus != 1:
             frappe.throw("Submit Load Dispatch before creating Purchase Receipt")
 
-        if frappe.db.exists("Purchase Receipt", {"custom_load_dispatch": ld.name}):
+        if frappe.db.exists(
+            "Purchase Receipt",
+            {
+                "custom_load_dispatch": ld.name,
+                "docstatus": 1  # ✅ only submitted blocks
+            }
+        ):
             frappe.throw("Purchase Receipt already created for this Load Dispatch")
+
 
         supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
         if not supplier:
@@ -321,6 +293,8 @@ def create_purchase_receipt(load_dispatch):
         pr.supplier = supplier
         pr.posting_date = getdate()
         pr.set_warehouse = ld.warehouse
+        pr.set_posting_time = 1
+        # pr.company = 
 
         # Custom fields (safe)
         if pr.meta.has_field("custom_load_dispatch"):
@@ -345,13 +319,12 @@ def create_purchase_receipt(load_dispatch):
             })
 
         pr.insert(ignore_permissions=True)
-        pr.submit()
 
         # ------------------------------------------------
         # UPDATE LOAD DISPATCH
         # ------------------------------------------------
-        ld.db_set("total_receipt_quantity", 1)
-        ld.db_set("status", "Received")
+        # ld.db_set("total_receipt_quantity", 1)
+        # ld.db_set("status", "Received")
 
         # ------------------------------------------------
         # UPDATE LOAD PLAN

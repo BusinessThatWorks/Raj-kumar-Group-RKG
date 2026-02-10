@@ -60,41 +60,57 @@ frappe.ui.form.on("Load Dispatch", {
     },
 
     refresh(frm) {
+
+        
         frm.clear_custom_buttons();
 
         if (frm.doc.docstatus !== 1) return;
+
+        if (frm.doc.docstatus === 1 && frm.doc.total_receipt_quantity === 0) {
+            frm.set_df_property("warehouse", "read_only", 0); // editable
+        } else {
+            frm.set_df_property("warehouse", "read_only", 1); // read-only
+        }
 
         frappe.call({
             method: "frappe.client.get_list",
             args: {
                 doctype: "Purchase Receipt",
                 filters: {
-                    custom_load_dispatch: frm.doc.name
+                    custom_load_dispatch: frm.doc.name,
+                    docstatus: 1   // ✅ ONLY submitted PR
                 },
                 fields: ["name"],
                 limit_page_length: 1
             },
             callback(r) {
                 if (!r.message || r.message.length === 0) {
-                    // ✅ Create Purchase Receipt
+                    // ✅ No submitted PR → allow creation
                     frm.add_custom_button(
                         "Create Purchase Receipt",
                         () => create_purchase_receipt(frm),
                         __("Create")
                     ).addClass("btn-primary");
                 } else {
-                    // ✅ Open Purchase Receipt
+                    // ❌ Submitted PR exists → open it
                     frm.add_custom_button(
                         "Open Purchase Receipt",
                         () => {
-                            frappe.set_route("Form", "Purchase Receipt", r.message[0].name);
+                            frappe.set_route(
+                                "Form",
+                                "Purchase Receipt",
+                                r.message[0].name
+                            );
                         },
                         __("View")
                     );
                 }
             }
         });
+
+        
     }
+
 });
 
 // ===============================

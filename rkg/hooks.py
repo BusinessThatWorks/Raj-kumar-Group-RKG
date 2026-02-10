@@ -154,8 +154,13 @@ add_to_apps_screen = [
 doc_events = {
     "Purchase Invoice": {
         "autoname": "rkg.utils.pi_naming.autoname",
-    }
+    },
+
+    "Purchase Receipt": {
+        "on_cancel": "rkg.utils.purchase_receipt.on_cancel_purchase_receipt",
+    },
 }
+
 
 
 
