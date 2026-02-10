@@ -154,12 +154,17 @@ add_to_apps_screen = [
 doc_events = {
     "Purchase Invoice": {
         "autoname": "rkg.utils.pi_naming.autoname",
+        "on_submit": "rkg.utils.purchase_invoice.on_submit_purchase_invoice",
+        "on_cancel": "rkg.utils.purchase_invoice.on_cancel_purchase_invoice",
     },
 
     "Purchase Receipt": {
+        "validate": "rkg.utils.purchase_receipt.validate_purchase_receipt",
+        "on_submit": "rkg.utils.purchase_receipt.on_submit_purchase_receipt",
         "on_cancel": "rkg.utils.purchase_receipt.on_cancel_purchase_receipt",
     },
 }
+
 
 
 
