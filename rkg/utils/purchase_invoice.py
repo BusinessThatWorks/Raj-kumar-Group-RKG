@@ -2,40 +2,45 @@
 import frappe
 
 
+def get_load_dispatch_from_pi(doc):
+    """
+    Fetch Load Dispatch using Purchase Receipt linked in PI items
+    """
+    for item in doc.items:
+        if item.purchase_receipt:
+            return frappe.db.get_value(
+                "Purchase Receipt",
+                item.purchase_receipt,
+                "custom_load_dispatch"
+            )
+    return None
+
+
 def on_submit_purchase_invoice(doc, method=None):
     """
-    Update Load Dispatch & Load Plan when Purchase Invoice is submitted
-    Assumption: 1 PI = 1 Load Dispatch
+    Update Load Dispatch when Purchase Invoice is submitted
     """
 
-    if not doc.custom_load_dispatch:
+    load_dispatch = get_load_dispatch_from_pi(doc)
+    if not load_dispatch:
         return
 
-    # 🔹 Load Dispatch
-    ld = frappe.get_doc("Load Dispatch", doc.custom_load_dispatch)
+    ld = frappe.get_doc("Load Dispatch", load_dispatch)
 
-    # Set billed quantity = 1
+    # 1️⃣ Mark billed
     ld.db_set("total_billed_quantity", 1)
-
-    # (Optional) Update status if you use billing state
-    # ld.db_set("status", "Billed")
-
 
 
 def on_cancel_purchase_invoice(doc, method=None):
     """
-    Reset Load Dispatch & Load Plan when Purchase Invoice is cancelled
+    Reset Load Dispatch when Purchase Invoice is cancelled
     """
 
-    if not doc.custom_load_dispatch:
+    load_dispatch = get_load_dispatch_from_pi(doc)
+    if not load_dispatch:
         return
 
-    # 🔹 Load Dispatch
-    ld = frappe.get_doc("Load Dispatch", doc.custom_load_dispatch)
+    ld = frappe.get_doc("Load Dispatch", load_dispatch)
 
-    # Reset billed quantity
+    # 2️⃣ Reset billed
     ld.db_set("total_billed_quantity", 0)
-
-    # (Optional) Reset status
-    # ld.db_set("status", "Received")
-
