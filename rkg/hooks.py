@@ -163,6 +163,11 @@ doc_events = {
         "on_submit": "rkg.utils.purchase_receipt.on_submit_purchase_receipt",
         "on_cancel": "rkg.utils.purchase_receipt.on_cancel_purchase_receipt",
     },
+    "Damage Assessment": {
+        "validate": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
+        "on_cancel": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
+        "on_trash": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
+    }
 }
 
 
