@@ -2,25 +2,20 @@ let AVAILABLE_FRAMES = [];
 let LOAD_REFERENCE_NO = "";
 let ACCEPTED_WAREHOUSE = "";
 
+/* ============================================================
+   PARENT FORM
+   ============================================================ */
+
 frappe.ui.form.on("Damage Assessment", {
 
     refresh(frm) {
+
+        frm.clear_custom_buttons();
 
         frm.toggle_display(
             "damage_assessment_items",
             !!frm.doc.load_dispatch
         );
-
-        frm.clear_custom_buttons();
-
-        // 🔥 ALWAYS SHOW CREATE BUTTON AFTER SUBMIT
-        if (frm.doc.docstatus === 1) {
-            frm.add_custom_button(
-                __("Create Purchase Receipt"),
-                () => create_purchase_receipt(frm),
-                __("Create")
-            ).addClass("btn-primary");
-        }
     },
 
     load_dispatch(frm) {
@@ -51,6 +46,10 @@ frappe.ui.form.on("Damage Assessment", {
 });
 
 
+/* ============================================================
+   CHILD TABLE
+   ============================================================ */
+
 frappe.ui.form.on("Damage Assessment Item", {
 
     frame_no(frm, cdt, cdn) {
@@ -64,6 +63,7 @@ frappe.ui.form.on("Damage Assessment Item", {
             return;
         }
 
+        // Auto-fill
         row.load_reference_number = LOAD_REFERENCE_NO;
         row.from_warehouse = ACCEPTED_WAREHOUSE;
 
@@ -91,6 +91,10 @@ frappe.ui.form.on("Damage Assessment Item", {
     }
 });
 
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 function calculate_total(frm) {
 
@@ -126,33 +130,4 @@ function reset_all(frm) {
     frm.clear_table("damage_assessment_items");
     frm.set_value("total_estimated_cost", 0);
     frm.refresh_fields();
-}
-
-
-// ============================================================
-// CREATE PURCHASE RECEIPT
-// ============================================================
-
-function create_purchase_receipt(frm) {
-
-    frappe.call({
-        method: "rkg.utils.damage_assessment.create_purchase_receipt",
-        args: {
-            damage_assessment: frm.doc.name
-        },
-        freeze: true,
-        freeze_message: "Creating Purchase Receipt...",
-        callback(r) {
-
-            if (!r.message) return;
-
-            frappe.show_alert({
-                message: __("Purchase Receipt Created: {0}", [r.message]),
-                indicator: "green"
-            });
-
-            // stay on DA, allow multiple PR creation
-            frm.reload_doc();
-        }
-    });
 }
