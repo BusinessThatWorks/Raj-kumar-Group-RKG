@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 import frappe
+from frappe.utils import getdate
 
 
 # ============================================================
-# HOOK METHOD
+# VALIDATION & LOAD DISPATCH FRAME COUNT UPDATE
 # ============================================================
 
 def update_load_dispatch_frame_counts(doc, method=None):
-    """
-    Runs on:
-    - validate
-    - on_cancel
-    - on_trash
-    """
 
-    # ---------------- SERVER VALIDATION ----------------
+    # ---------------- SERVER SIDE VALIDATION ----------------
     if doc.docstatus == 0:
 
         if not doc.damage_assessment_items:
@@ -29,6 +24,8 @@ def update_load_dispatch_frame_counts(doc, method=None):
                 frappe.throw(f"Row {i}: From Warehouse is mandatory")
 
             # BUSINESS RULE
+            # OK     → price CAN be 0
+            # Not OK → price MUST be > 0
             if row.status == "Not OK" and (row.estimated_amount or 0) <= 0:
                 frappe.throw(
                     f"Row {i}: Estimated Amount must be greater than 0 when status is Not OK"
@@ -47,15 +44,6 @@ def update_load_dispatch_frame_counts(doc, method=None):
         pluck="name"
     )
 
-    if not da_names:
-        frappe.db.set_value(
-            "Load Dispatch",
-            doc.load_dispatch,
-            {"frames_ok": 0, "frames_not_ok": 0},
-            update_modified=False
-        )
-        return
-
     ok_count = frappe.db.count(
         "Damage Assessment Item",
         {
@@ -63,7 +51,7 @@ def update_load_dispatch_frame_counts(doc, method=None):
             "parenttype": "Damage Assessment",
             "status": "OK"
         }
-    )
+    ) if da_names else 0
 
     not_ok_count = frappe.db.count(
         "Damage Assessment Item",
@@ -72,7 +60,7 @@ def update_load_dispatch_frame_counts(doc, method=None):
             "parenttype": "Damage Assessment",
             "status": "Not OK"
         }
-    )
+    ) if da_names else 0
 
     frappe.db.set_value(
         "Load Dispatch",
@@ -86,7 +74,7 @@ def update_load_dispatch_frame_counts(doc, method=None):
 
 
 # ============================================================
-# API
+# API : LOAD DISPATCH ITEMS
 # ============================================================
 
 @frappe.whitelist()
@@ -109,33 +97,82 @@ def get_items_from_load_dispatch(load_dispatch):
         "set_warehouse"
     )
 
-    da_names = frappe.get_all(
-        "Damage Assessment",
-        filters={"load_dispatch": load_dispatch},
-        pluck="name"
-    )
-
-    not_ok_frames = set()
-    if da_names:
-        not_ok_frames = set(
-            frappe.get_all(
-                "Damage Assessment Item",
-                {
-                    "parent": ["in", da_names],
-                    "parenttype": "Damage Assessment",
-                    "status": "Not OK"
-                },
-                pluck="frame_no"
-            )
-        )
-
     items = []
     for row in ld.items:
-        if row.item_code not in not_ok_frames:
-            items.append({"frame_no": row.item_code})
+        items.append({
+            "frame_no": row.item_code,
+            "item_code": row.item_code,
+            "qty": row.qty
+        })
 
     return {
         "load_reference_number": ld.linked_load_reference_no,
         "accepted_warehouse": accepted_warehouse,
         "items": items
     }
+
+
+# ============================================================
+# CREATE PURCHASE RECEIPT (NO HIDE LOGIC)
+# ============================================================
+
+@frappe.whitelist()
+def create_purchase_receipt(damage_assessment):
+
+    da = frappe.get_doc("Damage Assessment", damage_assessment)
+
+    if da.docstatus != 1:
+        frappe.throw("Submit Damage Assessment first")
+
+    supplier = frappe.db.get_value(
+        "RKG Settings", {}, "default_supplier"
+    )
+
+    if not supplier:
+        frappe.throw("Default Supplier not set in RKG Settings")
+
+    pr = frappe.new_doc("Purchase Receipt")
+    pr.supplier = supplier
+    pr.posting_date = getdate()
+    pr.set_posting_time = 1
+    pr.custom_load_dispatch = da.load_dispatch
+    pr.supplier_delivery_note = da.name
+
+    # Prevent duplicate PR ITEMS only
+    existing_frames = set(
+        frappe.get_all(
+            "Purchase Receipt Item",
+            filters={
+                "parenttype": "Purchase Receipt",
+                "item_code": ["in", [d.frame_no for d in da.damage_assessment_items]]
+            },
+            pluck="item_code"
+        )
+    )
+
+    added = False
+
+    for row in da.damage_assessment_items:
+
+        if row.status != "Not OK":
+            continue
+
+        if row.frame_no in existing_frames:
+            continue
+
+        pr.append("items", {
+            "item_code": row.frame_no,
+            "qty": 1,
+            "rate": row.estimated_amount,
+            "warehouse": row.from_warehouse
+        })
+
+        added = True
+
+    if not added:
+        frappe.throw("No new Not OK frames available for Purchase Receipt")
+
+    pr.insert(ignore_permissions=True)
+    #pr.submit()
+
+    return pr.name
