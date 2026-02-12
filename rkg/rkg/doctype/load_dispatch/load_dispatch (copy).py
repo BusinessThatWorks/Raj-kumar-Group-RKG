@@ -4,30 +4,29 @@ import frappe
 import csv
 import io
 from frappe.model.document import Document
-from frappe.utils import now_datetime, getdate, today
+from frappe.utils import now_datetime, getdate
 
 
 # =====================================================
 # LOAD DISPATCH DOC
 # =====================================================
+import frappe
+from frappe.model.document import Document
+from frappe.utils import now_datetime
+
 
 class LoadDispatch(Document):
 
-    # -------------------------------------------------
-    # AUTONAME
-    # -------------------------------------------------
     def autoname(self):
         dt = now_datetime()
         self.name = f"LD-{dt.strftime('%Y%m%d-%H%M%S')}"
 
-    # -------------------------------------------------
-    # VALIDATE
-    # -------------------------------------------------
     def validate(self):
-
+        # 1️⃣ Items mandatory
         if not self.items:
             frappe.throw("Load Dispatch Items cannot be empty")
 
+        # 2️⃣ Dispatch qty validation
         if (
             self.total_dispatch_quantity
             and self.total_load_quantity
@@ -38,10 +37,15 @@ class LoadDispatch(Document):
                 f"cannot exceed Load Plan Qty ({self.total_load_quantity})"
             )
 
-    # -------------------------------------------------
-    # BEFORE SUBMIT
-    # -------------------------------------------------
     def before_submit(self):
+        self.validate_warehouse_on_submit()
+
+    def validate_warehouse_on_submit(self):
+        """
+        Warehouse is NOT allowed on submit
+        EXCEPTION:
+        Allow submit if total_receipt_quantity == 0
+        """
 
         total_receipt_qty = self.total_receipt_quantity or 0
 
@@ -51,11 +55,8 @@ class LoadDispatch(Document):
                 title="Warehouse Validation"
             )
 
-    # -------------------------------------------------
-    # ON SUBMIT
-    # -------------------------------------------------
     def on_submit(self):
-
+        # 3️⃣ Update linked Load Plan status
         if self.linked_load_reference_no:
             frappe.db.set_value(
                 "Load Plan",
@@ -64,13 +65,13 @@ class LoadDispatch(Document):
                 "In-Transit"
             )
 
+        # 4️⃣ Update self status
         self.db_set("status", "In-Transit")
 
 
 # =====================================================
-# CSV IMPORT (NO ROW SKIP VERSION)
+# CSV IMPORT + ITEM + LOAD DISPATCH ITEMS
 # =====================================================
-
 @frappe.whitelist()
 def read_dispatch_csv(file_url, warehouse=None):
 
@@ -100,36 +101,47 @@ def read_dispatch_csv(file_url, warehouse=None):
     file_doc = frappe.get_doc("File", {"file_url": file_url})
     content = file_doc.get_content()
 
-    csv_data = io.StringIO(content)
-    reader = csv.reader(csv_data)
+    reader = csv.reader(io.StringIO(content))
     headers = [h.strip() for h in next(reader)]
 
     if headers != EXPECTED_HEADERS:
-        frappe.throw("CSV Header mismatch")
+        frappe.throw(
+            "CSV Header mismatch.<br><br>"
+            f"<b>Expected:</b><br>{EXPECTED_HEADERS}<br><br>"
+            f"<b>Found:</b><br>{headers}"
+        )
 
-    csv_data.seek(0)
-    dict_reader = csv.DictReader(csv_data)
+    dict_reader = csv.DictReader(io.StringIO(content), fieldnames=headers)
+    next(dict_reader)
     rows = list(dict_reader)
 
     if not rows:
         frappe.throw("CSV file is empty")
 
     # -------------------------------------------------
-    # LOAD REFERENCE
+    # LOAD REFERENCE DUPLICATE CHECK (CRITICAL)
     # -------------------------------------------------
     load_ref = rows[0]["HMSI Load Reference No"].strip()
 
-    # Check Load Dispatch duplicate
-    if frappe.db.exists("Load Dispatch", {"linked_load_reference_no": load_ref}):
-        frappe.throw(f"Load Dispatch already exists for Load Reference {load_ref}")
+    existing_ld = frappe.db.get_value(
+        "Load Dispatch",
+        {"linked_load_reference_no": load_ref},
+        "name"
+    )
+
+    if existing_ld:
+        frappe.throw(
+            f"Load Dispatch already exists for this Load Reference No.<br>"
+            f"<b>Load Reference:</b> {load_ref}<br>"
+            f"<b>Load Dispatch:</b> {existing_ld}"
+        )
 
     invoice_no = None
     total_dispatch_qty = 0
     items = []
-    duplicate_frames = []
 
     # -------------------------------------------------
-    # PROCESS ROWS
+    # PROCESS CSV ROWS
     # -------------------------------------------------
     for row in rows:
 
@@ -140,17 +152,16 @@ def read_dispatch_csv(file_url, warehouse=None):
             continue
 
         invoice_no = invoice_no or row["Invoice No"].strip()
-
-        # Duplicate check (DO NOT THROW)
-        if frappe.db.exists("Item", frame_no):
-            duplicate_frames.append(frame_no)
-            continue
-
         total_dispatch_qty += qty
 
-        # Create Item Group if not exists
-        item_group = row["Model Name"].strip()
+        # Duplicate Item Check
+        if frappe.db.exists("Item", frame_no):
+            frappe.throw(f"Duplicate Frame No detected:<br><b>{frame_no}</b>")
 
+        # -------------------------------------------------
+        # ITEM GROUP
+        # -------------------------------------------------
+        item_group = row["Model Name"].strip()
         if not frappe.db.exists("Item Group", item_group):
             frappe.get_doc({
                 "doctype": "Item Group",
@@ -159,7 +170,9 @@ def read_dispatch_csv(file_url, warehouse=None):
                 "is_group": 0
             }).insert(ignore_permissions=True)
 
-        # Create Item
+        # -------------------------------------------------
+        # CREATE ITEM MASTER
+        # -------------------------------------------------
         item = frappe.new_doc("Item")
         item.item_code = frame_no
         item.item_name = row["Model Variant"]
@@ -168,6 +181,7 @@ def read_dispatch_csv(file_url, warehouse=None):
         item.is_stock_item = 1
         item.default_warehouse = warehouse
 
+        # Custom Fields
         item.custom_item_type = "Two Wheeler"
         item.custom_model_serial_name = row["Model Serial No"]
         item.custom_engine_number = row["Engine no"]
@@ -181,12 +195,16 @@ def read_dispatch_csv(file_url, warehouse=None):
 
         item.insert(ignore_permissions=True)
 
-        # Rate Calculation
+        # -------------------------------------------------
+        # RATE CALCULATION
+        # -------------------------------------------------
         price_unit = float(row["Price/Unit"])
         tax_percent = float(row["Tax Rate"].replace("%", "").strip())
         rate = round(price_unit + (price_unit * tax_percent / 100), 2)
 
-        # Append Child Row
+        # -------------------------------------------------
+        # LOAD DISPATCH CHILD ROW
+        # -------------------------------------------------
         items.append({
             "hmsi_load_reference_no": load_ref,
             "invoice_no": row["Invoice No"],
@@ -203,18 +221,14 @@ def read_dispatch_csv(file_url, warehouse=None):
             "qty": qty,
             "dor": getdate(row["DOR"]),
             "price_unit": price_unit,
-            "key_no": "",
+            "key_no": row["Key No"],
             "unit": row["Unit"],
             "rate": rate,
         })
 
     # -------------------------------------------------
-    # FINAL VALIDATIONS
+    # LOAD PLAN VALIDATION
     # -------------------------------------------------
-
-    if total_dispatch_qty == 0:
-        frappe.throw("All Frame Numbers already exist. Nothing to import.")
-
     load_plan = frappe.db.get_value(
         "Load Plan",
         {"load_reference_no": load_ref},
@@ -228,25 +242,12 @@ def read_dispatch_csv(file_url, warehouse=None):
     if load_plan.status != "Planned":
         frappe.throw("Load Plan already used")
 
-    if total_dispatch_qty > load_plan.total_qty:
+    if total_dispatch_qty != load_plan.total_qty:
         frappe.throw(
-            f"Dispatch Qty ({total_dispatch_qty}) cannot exceed "
-            f"Load Plan Qty ({load_plan.total_qty})"
+            f"Quantity mismatch:<br>"
+            f"Load Plan Qty = {load_plan.total_qty}<br>"
+            f"Dispatch Qty = {total_dispatch_qty}"
         )
-
-    # -------------------------------------------------
-    # SUCCESS RETURN
-    # -------------------------------------------------
-
-    warning = None
-    duplicate_count = len(duplicate_frames)
-
-    if duplicate_count > 0:
-        warning = {
-            "count": duplicate_count,
-            "frames": duplicate_frames
-        }
-
 
     return {
         "success": True,
@@ -254,11 +255,8 @@ def read_dispatch_csv(file_url, warehouse=None):
         "invoice_no": invoice_no,
         "total_load_quantity": load_plan.total_qty,
         "total_dispatch_quantity": total_dispatch_qty,
-        "items": items,
-        "duplicate_info": warning
+        "items": items
     }
-
-
 
 @frappe.whitelist()
 def create_purchase_receipt(load_dispatch):
@@ -325,8 +323,8 @@ def create_purchase_receipt(load_dispatch):
         # ------------------------------------------------
         # UPDATE LOAD DISPATCH
         # ------------------------------------------------
-        ld.db_set("total_receipt_quantity", 1)
-        ld.db_set("status", "Received")
+        # ld.db_set("total_receipt_quantity", 1)
+        # ld.db_set("status", "Received")
 
         # ------------------------------------------------
         # UPDATE LOAD PLAN
@@ -350,11 +348,9 @@ def create_purchase_receipt(load_dispatch):
             "Purchase Receipt creation failed. Please check Error Log."
         )
 
-
 # =====================================================
-# GET ITEMS
+# GET ITEMS FROM LOAD DISPATCH
 # =====================================================
-
 @frappe.whitelist()
 def get_items_from_load_dispatch(load_dispatch):
 
@@ -364,7 +360,6 @@ def get_items_from_load_dispatch(load_dispatch):
         frappe.throw("Load Dispatch must be Submitted")
 
     items = []
-
     for d in ld.items:
         items.append({
             "item_code": d.item_code,
