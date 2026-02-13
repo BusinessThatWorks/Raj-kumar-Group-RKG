@@ -4,7 +4,7 @@ import frappe
 import csv
 import io
 from frappe.model.document import Document
-from frappe.utils import now_datetime, getdate, today
+from frappe.utils import now_datetime, getdate, today,add_days
 
 
 # =====================================================
@@ -178,7 +178,7 @@ def read_dispatch_csv(file_url, warehouse=None):
         item.custom_dor = getdate(row["DOR"])
         item.gst_hsn_code = row["HSN Code"]
         item.custom_hsn_code = row["HSN Code"]
-
+        item.end_of_life = add_days(today(), 1)
         item.insert(ignore_permissions=True)
 
         # Rate Calculation
