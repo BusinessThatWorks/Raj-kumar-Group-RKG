@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:frame_no",
  "creation": "2026-01-27 17:21:33.704679",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -23,7 +24,8 @@
    "in_list_view": 1,
    "label": "Frame No",
    "options": "Item",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "key_no",
@@ -72,10 +74,11 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-27 17:36:01.492389",
+ "modified": "2026-02-13 11:01:51.893071",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Battery Key Upload Item",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

@@ -8,10 +8,12 @@
  "field_order": [
   "frame_information_section",
   "item_code",
-  "frame_no",
   "column_break_ubdc",
-  "key_number",
   "warehouse",
+  "section_break_uona",
+  "frame_no",
+  "column_break_dlkv",
+  "key_number",
   "battery_details_section",
   "battery_serial_no",
   "battery_type",
@@ -63,6 +65,7 @@
   },
   {
    "description": "Associated key number for this frame",
+   "fetch_from": "frame_no.key_no",
    "fieldname": "key_number",
    "fieldtype": "Data",
    "label": "Key Number"
@@ -70,13 +73,14 @@
   {
    "description": "Unique frame number/identifier",
    "fieldname": "frame_no",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Frame No",
+   "options": "Battery Key Upload Item",
    "reqd": 1
   },
   {
-   "description": "Warehouse location of this frame (auto-updated from Serial No)",
+   "description": "Warehouse location of this frame (auto-updated from Item Code)",
    "fieldname": "warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
@@ -95,10 +99,10 @@
    "options": "Battery Information"
   },
   {
+   "fetch_from": "battery_serial_no.battery_type",
    "fieldname": "battery_type",
    "fieldtype": "Data",
-   "label": "Battery Type",
-   "read_only": 1
+   "label": "Battery Type"
   },
   {
    "fieldname": "column_break_dckj",
@@ -159,13 +163,21 @@
    "fieldtype": "Table",
    "label": "Swap History",
    "options": "Frame Bundle Swap History"
+  },
+  {
+   "fieldname": "section_break_uona",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_dlkv",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-04 14:46:51.963298",
+ "modified": "2026-02-13 11:56:52.896808",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Frame Bundle",
