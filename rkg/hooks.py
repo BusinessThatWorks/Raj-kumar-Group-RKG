@@ -301,7 +301,8 @@ fixtures = [
                 "Load Dispatch",
                 "Load Plan",
                 "Warehouse",
-                "Journal Entry"
+                "Journal Entry",
+                "Stock Entry"
             ]]
         ]
     },
