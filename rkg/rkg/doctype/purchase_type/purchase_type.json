@@ -22,10 +22,11 @@
    "reqd": 1
   },
   {
+   "description": "Purchase Invoice Numbering Field",
    "fieldname": "series",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Naming Series",
+   "label": "Purchase Invoice Naming Series",
    "reqd": 1
   },
   {
@@ -36,13 +37,14 @@
    "fieldname": "type_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Type",
+   "label": "Purchase Type Name",
    "reqd": 1,
    "unique": 1
   },
   {
    "fieldname": "cost_center",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "in_preview": 1,
    "label": "Cost Center",
    "options": "Cost Center",
@@ -52,7 +54,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-13 14:21:06.905472",
+ "modified": "2026-02-16 12:50:39.056553",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Purchase Type",

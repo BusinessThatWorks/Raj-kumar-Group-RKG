@@ -47,6 +47,20 @@ add_to_apps_screen = [
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
+
+doctype_js = {
+    "Sales Invoice": "public/js/sale_invoice.js",
+    "Delivery Note": "public/js/delivery_note.js",
+    "Sales Order": "public/js/sales_order.js",
+    "Stock Entry": "public/js/stock_entry.js",
+    "Journal Entry": "public/js/journal_entry.js",
+    "Purchase Invoice": "public/js/purchase_invoice.js",
+    "Purchase Receipt": "public/js/purchase_receipt.js",
+
+
+}
+
+
 # Svg Icons
 # ------------------
 # include app icons in desk
@@ -167,6 +181,15 @@ doc_events = {
         "validate": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
         "on_cancel": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
         "on_trash": "rkg.utils.damage_assessment.update_load_dispatch_frame_counts",
+    },
+    "Sales Order": {
+        "autoname": "rkg.utils.sales_order.autoname_sales_order"
+    },
+    "Delivery Note": {
+        "autoname": "rkg.utils.delivery_note.autoname_delivery_note"
+    },
+    "Sales Invoice": {
+        "autoname": "rkg.utils.sales_invoice.autoname_sales_invoice"
     }
 }
 
@@ -302,7 +325,9 @@ fixtures = [
                 "Load Plan",
                 "Warehouse",
                 "Journal Entry",
-                "Stock Entry"
+                "Stock Entry",
+                "Cost Center",
+                "Sales Order"
             ]]
         ]
     },

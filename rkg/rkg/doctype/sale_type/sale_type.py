@@ -2,7 +2,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class PurchaseType(Document):
+class SaleType(Document):
 
     def validate(self):
 
