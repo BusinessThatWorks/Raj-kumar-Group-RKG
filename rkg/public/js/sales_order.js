@@ -37,9 +37,6 @@ frappe.ui.form.on('Sales Order', {
         // 🔴 If Sales Type cleared
         if (!frm.doc.sales_type) {
 
-            // Clear naming series (optional)
-            frm.set_df_property("naming_series", "options", "");
-
             // Show all Cost Centers
             frm.set_query("cost_center", function() {
                 return {};
@@ -52,28 +49,14 @@ frappe.ui.form.on('Sales Order', {
         frappe.db.get_value(
             "Sale Type",
             frm.doc.sales_type,
-            ["series", "cost_center"]
+            ["cost_center"]
         ).then(r => {
 
             if (!r.message) return;
 
             let sale_cc = r.message.cost_center;
 
-            /* 1️⃣ Naming Series */
-            if (r.message.series) {
-
-                let series_list = r.message.series.split("\n");
-
-                frm.set_df_property(
-                    "naming_series",
-                    "options",
-                    series_list.join("\n")
-                );
-
-                frm.set_value("naming_series", series_list[0]);
-            }
-
-            /* 2️⃣ Cost Center */
+            /* 1️⃣ Only Cost Center (NO naming_series logic) */
             if (sale_cc) {
 
                 frm.set_value("cost_center", sale_cc);
