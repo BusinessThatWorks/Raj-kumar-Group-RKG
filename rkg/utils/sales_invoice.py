@@ -59,7 +59,7 @@ def autoname_sales_invoice(doc, method=None):
         seq = int(last[0][0].split("-")[-1]) + 1 if last else 1
 
         # 6️⃣ Assign final name
-        doc.name = f"{prefix}{str(seq).zfill(5)}"
+        doc.name = f"{prefix}{str(seq).zfill(3)}"
 
     else:
         # ----------------- Let Frappe handle system series -----------------
