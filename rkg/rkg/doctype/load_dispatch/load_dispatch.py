@@ -358,18 +358,23 @@ def read_dispatch_csv(file_url, warehouse=None):
         item.custom_hsn_code = row["HSN Code"]
         item.end_of_life = add_days(today(), 1)
 
-        # ---------------- SAFE TAX LOGIC ----------------
+        # ✅ TAX LINK
         tax_percent = float(row["Tax Rate"].replace("%", "").strip())
-        template_name = f"GST {int(tax_percent)}%"
 
-        if frappe.db.exists("Item Tax Template", template_name):
-            item.set("taxes", [])
+        template_name = frappe.db.sql("""
+            SELECT name FROM `tabItem Tax Template`
+            WHERE REPLACE(title, ' ', '') = %s
+            LIMIT 1
+        """, (f"GST{int(tax_percent)}%",), as_dict=1)
+
+        if template_name:
             item.append("taxes", {
-                "item_tax_template": template_name
+                "item_tax_template": template_name[0]["name"]
             })
-        # If not exists → do nothing (skip tax)
+
 
         item.insert(ignore_permissions=True)
+
 
         # ---------------- RATE CALCULATION ----------------
         price_unit = float(row["Price/Unit"])
