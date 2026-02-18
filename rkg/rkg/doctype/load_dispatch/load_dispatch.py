@@ -71,6 +71,193 @@ class LoadDispatch(Document):
 # CSV IMPORT (NO ROW SKIP VERSION)
 # =====================================================
 
+# @frappe.whitelist()
+# def read_dispatch_csv(file_url, warehouse=None):
+
+#     if not warehouse:
+#         frappe.throw("Please select Warehouse before importing CSV")
+
+#     EXPECTED_HEADERS = [
+#         "HMSI Load Reference No",
+#         "Invoice No",
+#         "Dispatch Date",
+#         "Model Variant",
+#         "Model Name",
+#         "Model Serial No",
+#         "Frame No",
+#         "Engine no",
+#         "Colour",
+#         "Tax Rate",
+#         "DOR",
+#         "HSN Code",
+#         "Qty",
+#         "Unit",
+#         "Price/Unit",
+#         "Key No",
+#         "Battery No",
+#     ]
+
+#     file_doc = frappe.get_doc("File", {"file_url": file_url})
+#     content = file_doc.get_content()
+
+#     csv_data = io.StringIO(content)
+#     reader = csv.reader(csv_data)
+#     headers = [h.strip() for h in next(reader)]
+
+#     if headers != EXPECTED_HEADERS:
+#         frappe.throw("CSV Header mismatch")
+
+#     csv_data.seek(0)
+#     dict_reader = csv.DictReader(csv_data)
+#     rows = list(dict_reader)
+
+#     if not rows:
+#         frappe.throw("CSV file is empty")
+
+#     # -------------------------------------------------
+#     # LOAD REFERENCE
+#     # -------------------------------------------------
+#     load_ref = rows[0]["HMSI Load Reference No"].strip()
+
+#     # Check Load Dispatch duplicate
+#     if frappe.db.exists("Load Dispatch", {"linked_load_reference_no": load_ref}):
+#         frappe.throw(f"Load Dispatch already exists for Load Reference {load_ref}")
+
+#     invoice_no = None
+#     total_dispatch_qty = 0
+#     items = []
+#     duplicate_frames = []
+
+#     # -------------------------------------------------
+#     # PROCESS ROWS
+#     # -------------------------------------------------
+#     for row in rows:
+
+#         frame_no = row["Frame No"].strip()
+#         qty = int(float(row["Qty"]))
+
+#         if qty <= 0:
+#             continue
+
+#         invoice_no = invoice_no or row["Invoice No"].strip()
+
+#         # Duplicate check (DO NOT THROW)
+#         if frappe.db.exists("Item", frame_no):
+#             duplicate_frames.append(frame_no)
+#             continue
+
+#         total_dispatch_qty += qty
+
+#         # Create Item Group if not exists
+#         item_group = row["Model Name"].strip()
+
+#         if not frappe.db.exists("Item Group", item_group):
+#             frappe.get_doc({
+#                 "doctype": "Item Group",
+#                 "item_group_name": item_group,
+#                 "parent_item_group": "All Item Groups",
+#                 "is_group": 0
+#             }).insert(ignore_permissions=True)
+
+#         # Create Item
+#         item = frappe.new_doc("Item")
+#         item.item_code = frame_no
+#         item.item_name = row["Model Variant"]
+#         item.item_group = item_group
+#         item.stock_uom = row["Unit"]
+#         item.is_stock_item = 1
+#         item.default_warehouse = warehouse
+
+#         item.custom_item_type = "Two Wheeler"
+#         item.custom_model_serial_name = row["Model Serial No"]
+#         item.custom_engine_number = row["Engine no"]
+#         item.custom_invoice_no = row["Invoice No"]
+#         item.custom_dispatch_date = getdate(row["Dispatch Date"])
+#         item.custom_color = row["Colour"]
+#         item.custom_tax_rate = row["Tax Rate"]
+#         item.custom_dor = getdate(row["DOR"])
+#         item.gst_hsn_code = row["HSN Code"]
+#         item.custom_hsn_code = row["HSN Code"]
+#         item.end_of_life = add_days(today(), 1)
+#         item.insert(ignore_permissions=True)
+
+#         # Rate Calculation
+#         price_unit = float(row["Price/Unit"])
+#         tax_percent = float(row["Tax Rate"].replace("%", "").strip())
+#         rate = round(price_unit + (price_unit * tax_percent / 100), 2)
+
+#         # Append Child Row
+#         items.append({
+#             "hmsi_load_reference_no": load_ref,
+#             "invoice_no": row["Invoice No"],
+#             "dispatch_date": getdate(row["Dispatch Date"]),
+#             "model_variant": row["Model Variant"],
+#             "model_name": row["Model Name"],
+#             "model_serial_no": row["Model Serial No"],
+#             "frame_no": frame_no,
+#             "engine_no": row["Engine no"],
+#             "item_code": frame_no,
+#             "color_code": row["Colour"],
+#             "tax_rate": row["Tax Rate"],
+#             "hsn_code": int(row["HSN Code"]),
+#             "qty": qty,
+#             "dor": getdate(row["DOR"]),
+#             "price_unit": price_unit,
+#             "key_no": "",
+#             "unit": row["Unit"],
+#             "rate": rate,
+#         })
+
+#     # -------------------------------------------------
+#     # FINAL VALIDATIONS
+#     # -------------------------------------------------
+
+#     if total_dispatch_qty == 0:
+#         frappe.throw("All Frame Numbers already exist. Nothing to import.")
+
+#     load_plan = frappe.db.get_value(
+#         "Load Plan",
+#         {"load_reference_no": load_ref},
+#         ["name", "total_qty", "status"],
+#         as_dict=True
+#     )
+
+#     if not load_plan:
+#         frappe.throw("Load Plan not found")
+
+#     if load_plan.status != "Planned":
+#         frappe.throw("Load Plan already used")
+
+#     if total_dispatch_qty > load_plan.total_qty:
+#         frappe.throw(
+#             f"Dispatch Qty ({total_dispatch_qty}) cannot exceed "
+#             f"Load Plan Qty ({load_plan.total_qty})"
+#         )
+
+#     # -------------------------------------------------
+#     # SUCCESS RETURN
+#     # -------------------------------------------------
+
+#     warning = None
+#     duplicate_count = len(duplicate_frames)
+
+#     if duplicate_count > 0:
+#         warning = {
+#             "count": duplicate_count,
+#             "frames": duplicate_frames
+#         }
+
+
+#     return {
+#         "success": True,
+#         "load_plan_name": load_plan.name,
+#         "invoice_no": invoice_no,
+#         "total_load_quantity": load_plan.total_qty,
+#         "total_dispatch_quantity": total_dispatch_qty,
+#         "items": items,
+#         "duplicate_info": warning
+#     }
+
 @frappe.whitelist()
 def read_dispatch_csv(file_url, warehouse=None):
 
@@ -114,12 +301,8 @@ def read_dispatch_csv(file_url, warehouse=None):
     if not rows:
         frappe.throw("CSV file is empty")
 
-    # -------------------------------------------------
-    # LOAD REFERENCE
-    # -------------------------------------------------
     load_ref = rows[0]["HMSI Load Reference No"].strip()
 
-    # Check Load Dispatch duplicate
     if frappe.db.exists("Load Dispatch", {"linked_load_reference_no": load_ref}):
         frappe.throw(f"Load Dispatch already exists for Load Reference {load_ref}")
 
@@ -128,9 +311,6 @@ def read_dispatch_csv(file_url, warehouse=None):
     items = []
     duplicate_frames = []
 
-    # -------------------------------------------------
-    # PROCESS ROWS
-    # -------------------------------------------------
     for row in rows:
 
         frame_no = row["Frame No"].strip()
@@ -141,7 +321,6 @@ def read_dispatch_csv(file_url, warehouse=None):
 
         invoice_no = invoice_no or row["Invoice No"].strip()
 
-        # Duplicate check (DO NOT THROW)
         if frappe.db.exists("Item", frame_no):
             duplicate_frames.append(frame_no)
             continue
@@ -159,7 +338,7 @@ def read_dispatch_csv(file_url, warehouse=None):
                 "is_group": 0
             }).insert(ignore_permissions=True)
 
-        # Create Item
+        # ---------------- CREATE ITEM ----------------
         item = frappe.new_doc("Item")
         item.item_code = frame_no
         item.item_name = row["Model Variant"]
@@ -174,19 +353,28 @@ def read_dispatch_csv(file_url, warehouse=None):
         item.custom_invoice_no = row["Invoice No"]
         item.custom_dispatch_date = getdate(row["Dispatch Date"])
         item.custom_color = row["Colour"]
-        item.custom_tax_rate = row["Tax Rate"]
         item.custom_dor = getdate(row["DOR"])
         item.gst_hsn_code = row["HSN Code"]
         item.custom_hsn_code = row["HSN Code"]
         item.end_of_life = add_days(today(), 1)
+
+        # ---------------- SAFE TAX LOGIC ----------------
+        tax_percent = float(row["Tax Rate"].replace("%", "").strip())
+        template_name = f"GST {int(tax_percent)}%"
+
+        if frappe.db.exists("Item Tax Template", template_name):
+            item.set("taxes", [])
+            item.append("taxes", {
+                "item_tax_template": template_name
+            })
+        # If not exists → do nothing (skip tax)
+
         item.insert(ignore_permissions=True)
 
-        # Rate Calculation
+        # ---------------- RATE CALCULATION ----------------
         price_unit = float(row["Price/Unit"])
-        tax_percent = float(row["Tax Rate"].replace("%", "").strip())
         rate = round(price_unit + (price_unit * tax_percent / 100), 2)
 
-        # Append Child Row
         items.append({
             "hmsi_load_reference_no": load_ref,
             "invoice_no": row["Invoice No"],
@@ -207,10 +395,6 @@ def read_dispatch_csv(file_url, warehouse=None):
             "unit": row["Unit"],
             "rate": rate,
         })
-
-    # -------------------------------------------------
-    # FINAL VALIDATIONS
-    # -------------------------------------------------
 
     if total_dispatch_qty == 0:
         frappe.throw("All Frame Numbers already exist. Nothing to import.")
@@ -234,19 +418,12 @@ def read_dispatch_csv(file_url, warehouse=None):
             f"Load Plan Qty ({load_plan.total_qty})"
         )
 
-    # -------------------------------------------------
-    # SUCCESS RETURN
-    # -------------------------------------------------
-
     warning = None
-    duplicate_count = len(duplicate_frames)
-
-    if duplicate_count > 0:
+    if duplicate_frames:
         warning = {
-            "count": duplicate_count,
+            "count": len(duplicate_frames),
             "frames": duplicate_frames
         }
-
 
     return {
         "success": True,
@@ -257,7 +434,6 @@ def read_dispatch_csv(file_url, warehouse=None):
         "items": items,
         "duplicate_info": warning
     }
-
 
 
 @frappe.whitelist()
