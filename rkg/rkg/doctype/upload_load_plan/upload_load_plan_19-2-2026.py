@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import frappe
 import csv
 import io
 from frappe.model.document import Document
 from frappe.utils import now_datetime
-from datetime import datetime, date
+from datetime import datetime
 from openpyxl import load_workbook
 
 
@@ -52,7 +53,10 @@ class UploadLoadPlan(Document):
         else:
             frappe.throw("Only CSV or Excel (.xlsx) files are allowed")
 
+        # ✅ HEADER VALIDATION (SPACE SAFE + ORDER STRICT)
         self.validate_headers(headers)
+
+        # ✅ ROW VALIDATION + PROCESS
         self.validate_and_process_rows(rows)
 
     # =====================================================
@@ -85,7 +89,7 @@ class UploadLoadPlan(Document):
         for row in ws.iter_rows(min_row=2, values_only=True):
             row_dict = {}
             for i, value in enumerate(row):
-                row_dict[headers[i]] = value
+                row_dict[headers[i]] = str(value).strip() if value is not None else ""
             rows.append(row_dict)
 
         return headers, rows
@@ -123,7 +127,8 @@ class UploadLoadPlan(Document):
 
             errors = []
 
-            ref = str(row.get("Load Reference No") or "").strip()
+            # Required fields
+            ref = row.get("Load Reference No")
             if not ref:
                 errors.append("Load Reference No missing")
 
@@ -147,7 +152,7 @@ class UploadLoadPlan(Document):
             )
 
             for f in ["Model", "Model Name", "Type", "Variant", "Color"]:
-                if not str(row.get(f) or "").strip():
+                if not row.get(f):
                     errors.append(f"{f} is required")
 
             if errors:
@@ -158,13 +163,13 @@ class UploadLoadPlan(Document):
                 "load_reference_no": ref,
                 "dispatch_date": dispatch_date,
                 "payment_date": payment_date,
-                "model": str(row["Model"]).strip(),
-                "model_name": str(row["Model Name"]).strip(),
-                "type": str(row["Type"]).strip(),
-                "variant": str(row["Variant"]).strip(),
-                "color": str(row["Color"]).strip(),
-                "group_color": str(row.get("Group Color") or "").strip(),
-                "option": str(row.get("Option") or "").strip(),
+                "model": row["Model"],
+                "model_name": row["Model Name"],
+                "type": row["Type"],
+                "variant": row["Variant"],
+                "color": row["Color"],
+                "group_color": row.get("Group Color"),
+                "option": row.get("Option"),
                 "quantity": qty,
             })
 
@@ -178,34 +183,14 @@ class UploadLoadPlan(Document):
         self.create_or_update_load_plans(valid_rows)
 
     # =====================================================
-    # FLEXIBLE DATE PARSER (MDY ACCEPTED)
+    # DATE PARSER
     # =====================================================
     def parse_date(self, value, label, errors):
-
-        if not value:
-            errors.append(f"{label} missing")
-            return None
-
-        # Excel already gives date object
-        if isinstance(value, date):
-            return value
-
-        value = str(value).strip()
-
-        formats = [
-            "%m/%d/%Y",
-            "%m-%d-%Y",
-            "%m.%d.%Y",
-            "%Y-%m-%d",
-            "%d/%m/%Y",
-        ]
-
-        for fmt in formats:
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y"):
             try:
                 return datetime.strptime(value, fmt).date()
             except Exception:
-                continue
-
+                pass
         errors.append(f"Invalid {label}")
         return None
 
