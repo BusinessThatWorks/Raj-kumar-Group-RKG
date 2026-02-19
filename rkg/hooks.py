@@ -190,6 +190,9 @@ doc_events = {
     },
     "Sales Invoice": {
         "autoname": "rkg.utils.sales_invoice.autoname_sales_invoice"
+    },
+    "Journal Entry": {
+        "autoname": "rkg.utils.journal_entry.autoname_journal_entry"
     }
 }
 
