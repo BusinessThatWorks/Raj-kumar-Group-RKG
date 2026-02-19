@@ -2,7 +2,8 @@ frappe.ui.form.on("Journal Entry", {
 
     cost_center(frm) {
         sync_cost_center(frm);
-    }
+    },
+    
 });
 
 

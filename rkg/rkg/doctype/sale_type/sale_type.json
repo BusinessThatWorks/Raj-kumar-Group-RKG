@@ -35,6 +35,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Sell Type Name",
+   "no_copy": 1,
    "reqd": 1
   },
   {
@@ -49,7 +50,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 15:05:52.959445",
+ "modified": "2026-02-19 13:15:46.569935",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Sale Type",
