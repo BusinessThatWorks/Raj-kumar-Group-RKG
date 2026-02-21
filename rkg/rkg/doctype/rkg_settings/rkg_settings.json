@@ -5,7 +5,17 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "default_supplier"
+  "default_supplier",
+  "section_break_giuc",
+  "cgst_rate_vehicle",
+  "default_cgst_rate_service",
+  "default_cgst_rate_ins",
+  "default_general_insurance_provider",
+  "column_break_rldf",
+  "sgst_rate_vehicle",
+  "default_sgst_rate_service",
+  "default_sgst_rate_ins",
+  "default_nd_insurance_provider"
  ],
  "fields": [
   {
@@ -15,12 +25,62 @@
    "label": "Default Supplier",
    "options": "Supplier",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_giuc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cgst_rate_vehicle",
+   "fieldtype": "Float",
+   "label": "Default CGST Rate(Vehicle)"
+  },
+  {
+   "fieldname": "default_cgst_rate_service",
+   "fieldtype": "Float",
+   "label": "Default CGST Rate(Service)"
+  },
+  {
+   "fieldname": "column_break_rldf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sgst_rate_vehicle",
+   "fieldtype": "Float",
+   "label": "Default SGST Rate(Vehicle)"
+  },
+  {
+   "fieldname": "default_sgst_rate_service",
+   "fieldtype": "Float",
+   "label": "Default SGST Rate(Service)"
+  },
+  {
+   "fieldname": "default_cgst_rate_ins",
+   "fieldtype": "Float",
+   "label": "Default CGST Rate(Insurance)"
+  },
+  {
+   "fieldname": "default_sgst_rate_ins",
+   "fieldtype": "Float",
+   "label": "Default SGST Rate(Insurance)"
+  },
+  {
+   "fieldname": "default_general_insurance_provider",
+   "fieldtype": "Link",
+   "label": "Default General Insurance Provider",
+   "options": "Insurance Provider"
+  },
+  {
+   "fieldname": "default_nd_insurance_provider",
+   "fieldtype": "Link",
+   "label": "Default ND Insurance Provider",
+   "options": "Insurance Provider"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 14:46:37.853126",
+ "modified": "2026-02-21 16:59:28.678228",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "RKG Settings",

@@ -1,0 +1,184 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:model_no",
+ "creation": "2026-02-20 12:03:32.797002",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "model_no",
+  "column_break_sadz",
+  "item_group",
+  "section_break_mgpl",
+  "ex_showroom",
+  "column_break_wckd",
+  "registration",
+  "column_break_fnvv",
+  "insurance",
+  "column_break_essu",
+  "extended_warranty",
+  "column_break_symj",
+  "nd_accessories",
+  "section_break_mirh",
+  "general_insurance_provider",
+  "column_break_yruc",
+  "nd_insurance_provider",
+  "section_break_dzxo",
+  "on_road_basic",
+  "column_break_fbij",
+  "on_road_with_ew",
+  "column_break_irwu",
+  "on_road_with_nd"
+ ],
+ "fields": [
+  {
+   "fieldname": "model_no",
+   "fieldtype": "Data",
+   "label": "Model No",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_sadz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "label": "Item Group",
+   "options": "Item Group"
+  },
+  {
+   "fieldname": "section_break_mgpl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "ex_showroom",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Ex-Show Room"
+  },
+  {
+   "fieldname": "column_break_wckd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "registration",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Registration"
+  },
+  {
+   "fieldname": "column_break_fnvv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "(1y OD + 5y TP )",
+   "fieldname": "insurance",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Insurance"
+  },
+  {
+   "fieldname": "column_break_essu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "(3+3y)",
+   "fieldname": "extended_warranty",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Ex Warranty"
+  },
+  {
+   "fieldname": "column_break_symj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "(1y OD+ 5y TP)",
+   "fieldname": "nd_accessories",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "ND INS"
+  },
+  {
+   "fieldname": "section_break_dzxo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "on_road_basic",
+   "fieldtype": "Currency",
+   "label": "On Road Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_fbij",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "on_road_with_ew",
+   "fieldtype": "Currency",
+   "label": "On Road + EW Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_irwu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "on_road_with_nd",
+   "fieldtype": "Currency",
+   "label": "On Road + ND Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_mirh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval: doc.insurance > 0",
+   "fieldname": "general_insurance_provider",
+   "fieldtype": "Link",
+   "label": "General Insurance Provider",
+   "options": "Insurance Provider"
+  },
+  {
+   "fieldname": "column_break_yruc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.nd_accessories > 0",
+   "fieldname": "nd_insurance_provider",
+   "fieldtype": "Link",
+   "label": "ND Insurance Provider",
+   "options": "Insurance Provider"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-21 16:57:44.018791",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "Model Price List",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

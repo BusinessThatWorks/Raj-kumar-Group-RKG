@@ -193,6 +193,9 @@ doc_events = {
     },
     "Journal Entry": {
         "autoname": "rkg.utils.journal_entry.autoname_journal_entry"
+    },
+    "Booking Form": {
+        "autoname": "rkg.utils.booking_form.autoname_booking_form_entry"
     }
 }
 
@@ -330,7 +333,8 @@ fixtures = [
                 "Journal Entry",
                 "Stock Entry",
                 "Cost Center",
-                "Sales Order"
+                "Sales Order",
+                "Customer"
             ]]
         ]
     },
