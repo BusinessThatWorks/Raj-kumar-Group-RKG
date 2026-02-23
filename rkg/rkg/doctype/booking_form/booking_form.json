@@ -82,6 +82,8 @@
   "nd_price",
   "nd_total",
   "other_tab",
+  "extended_warrantyew",
+  "ex_warranty_amount",
   "terms_tab",
   "declaration"
  ],
@@ -198,7 +200,8 @@
   {
    "fieldname": "road_price",
    "fieldtype": "Currency",
-   "label": "Reg & Road Tax Amount"
+   "label": "Reg & Road Tax Amount",
+   "read_only": 1
   },
   {
    "fieldname": "road_cgst_rate",
@@ -513,13 +516,25 @@
    "fieldname": "road_tax_amount",
    "fieldtype": "Currency",
    "label": "Road Tax Amount"
+  },
+  {
+   "default": "1 year",
+   "fieldname": "extended_warrantyew",
+   "fieldtype": "Select",
+   "label": "Extended Warranty(EW)",
+   "options": "1 year\n2 Year\n3 Year\n7 year"
+  },
+  {
+   "fieldname": "ex_warranty_amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 16:20:46.437536",
+ "modified": "2026-02-23 17:26:43.329502",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
