@@ -19,6 +19,8 @@ frappe.ui.form.on('Booking Form', {
                 frm.set_df_property("mobile_no", "read_only", 0);
                 frm.set_df_property("address", "read_only", 0);
                 frm.set_df_property("pin", "read_only", 0);
+                frm.set_df_property("post_office", "read_only", 0);
+                frm.set_df_property("district", "read_only", 0);
 
                 safe_set(frm, "customer_name", doc.customer_name);
                 safe_set(frm, "mobile_no", doc.mobile_no);
@@ -74,6 +76,7 @@ frappe.ui.form.on('Booking Form', {
                 frm._model_price_doc = doc;
 
                 safe_set(frm, "price", doc.ex_showroom);
+                safe_set(frm, "road_price", doc.registration);
 
                 if (!frm.doc.nd_type)
                     frm.set_value("nd_type", "Normal");
@@ -112,7 +115,9 @@ frappe.ui.form.on('Booking Form', {
     },
 
     hp_amount: function(frm) {
+
         if (frm.doc.payment_type === "Finance") {
+            calculate_final_amount(frm);
             calculate_finance_from_down(frm);
         }
     },
@@ -249,32 +254,59 @@ function calculate_nd(frm) {
 
 function calculate_final_amount(frm) {
 
-    let total =
+    let base_total =
         (frm.doc.amount || 0) +
         (frm.doc.road_total || 0) +
         (frm.doc.nd_total || 0);
 
-    safe_set(frm, "final_amount", total);
+    let hp = 0;
+
+    if (frm.doc.payment_type === "Finance") {
+        hp = frm.doc.hp_amount || 0;
+    }
+
+    let final_total = base_total + hp;
+
+    frm.set_value("final_amount", final_total);
 
     show_final_amount_top(frm);
-    manage_payment_logic(frm);
 }
 
 
 // ================= PAYMENT LOGIC =================
-
 function manage_payment_logic(frm) {
-
-    let final_amount = frm.doc.final_amount || 0;
 
     if (frm.doc.payment_type === "Cash") {
 
-        safe_set(frm, "down_payment_amount", final_amount);
-        safe_set(frm, "hp_amount", 0);
-        safe_set(frm, "finance_amount", 0);
+        // Remove mandatory
+        frm.set_df_property("down_payment_amount", "reqd", 0);
+        frm.set_df_property("finance_amount", "reqd", 0);
+        frm.set_df_property("hp_amount", "reqd", 0);
+        frm.set_df_property("hypothecated_bank", "reqd", 0);
+
+        // Reset finance values
+        frm.set_value("hp_amount", 0);
+        frm.set_value("finance_amount", 0);
+
+        calculate_final_amount(frm);
+
+        frm.set_value("down_payment_amount", frm.doc.final_amount);
     }
 
     else if (frm.doc.payment_type === "Finance") {
+
+        // Make mandatory
+        frm.set_df_property("down_payment_amount", "reqd", 1);
+        frm.set_df_property("finance_amount", "reqd", 1);
+        frm.set_df_property("hp_amount", "reqd", 1);
+        frm.set_df_property("hypothecated_bank", "reqd", 1);
+
+        // Default HP = 500 if empty
+        if (!frm.doc.hp_amount || frm.doc.hp_amount === 0) {
+            frm.set_value("hp_amount", 500);
+        }
+
+        calculate_final_amount(frm);
         calculate_finance_from_down(frm);
     }
 }

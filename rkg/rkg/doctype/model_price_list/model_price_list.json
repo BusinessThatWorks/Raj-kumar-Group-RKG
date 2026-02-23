@@ -65,7 +65,7 @@
    "fieldname": "registration",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Registration"
+   "label": "Registration & Road Tax"
   },
   {
    "fieldname": "column_break_fnvv",
@@ -156,7 +156,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-21 16:57:44.018791",
+ "modified": "2026-02-23 14:43:48.644916",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Model Price List",

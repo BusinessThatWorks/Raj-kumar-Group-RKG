@@ -46,12 +46,17 @@
   "hp_amount",
   "column_break_ljbb",
   "finance_amount",
+  "hypothecated_bank",
   "section_break_unnx",
   "final_amount",
   "section_break_j6ab",
   "amended_from",
   "tab_2_tab",
   "road_hsn_code",
+  "section_break_mpcx",
+  "registration_amount",
+  "column_break_qyrw",
+  "road_tax_amount",
   "section_break_bfmx",
   "road_cgst_rate",
   "road_cgst_amount",
@@ -76,7 +81,7 @@
   "column_break_udhs",
   "nd_price",
   "nd_total",
-  "registration_tab",
+  "other_tab",
   "terms_tab",
   "declaration"
  ],
@@ -134,7 +139,7 @@
   {
    "fieldname": "tab_2_tab",
    "fieldtype": "Tab Break",
-   "label": "Road Tax"
+   "label": "Registration & Road Tax"
   },
   {
    "fieldname": "section_break_kiww",
@@ -192,7 +197,7 @@
   {
    "fieldname": "road_price",
    "fieldtype": "Currency",
-   "label": "Price"
+   "label": "Registration & Road Tax"
   },
   {
    "fieldname": "road_cgst_rate",
@@ -270,11 +275,6 @@
    "fieldtype": "Select",
    "label": "Type",
    "options": "Normal\nUpgrade"
-  },
-  {
-   "fieldname": "registration_tab",
-   "fieldtype": "Tab Break",
-   "label": "Registration"
   },
   {
    "fieldname": "section_break_cxwl",
@@ -359,7 +359,8 @@
    "fieldname": "payment_type",
    "fieldtype": "Select",
    "label": "Payment Type",
-   "options": "Cash\nFinance"
+   "options": "Cash\nFinance",
+   "reqd": 1
   },
   {
    "fieldname": "section_break_nvyi",
@@ -400,7 +401,7 @@
    "fetch_from": "customer.hiris_id",
    "fieldname": "customer_hiris_id",
    "fieldtype": "Data",
-   "label": "Customer HIRIS ID",
+   "label": "Customer HIRISE ID",
    "reqd": 1
   },
   {
@@ -476,13 +477,43 @@
    "label": "RTO",
    "options": "RTO Master",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.payment_type==\"Finance\"",
+   "fieldname": "hypothecated_bank",
+   "fieldtype": "Link",
+   "label": "Hypothecated Bank",
+   "options": "Hypothecated Bank"
+  },
+  {
+   "fieldname": "other_tab",
+   "fieldtype": "Tab Break",
+   "label": "Other"
+  },
+  {
+   "fieldname": "section_break_mpcx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "registration_amount",
+   "fieldtype": "Currency",
+   "label": "Registration Amount"
+  },
+  {
+   "fieldname": "column_break_qyrw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "road_tax_amount",
+   "fieldtype": "Currency",
+   "label": "Road Tax Amount"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 12:54:10.982929",
+ "modified": "2026-02-23 15:02:40.345404",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
