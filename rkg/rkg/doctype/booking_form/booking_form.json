@@ -108,6 +108,7 @@
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Customer",
    "options": "Customer",
    "reqd": 1
@@ -139,7 +140,7 @@
   {
    "fieldname": "tab_2_tab",
    "fieldtype": "Tab Break",
-   "label": "Registration & Road Tax"
+   "label": "Reg & Road Tax"
   },
   {
    "fieldname": "section_break_kiww",
@@ -197,7 +198,7 @@
   {
    "fieldname": "road_price",
    "fieldtype": "Currency",
-   "label": "Registration & Road Tax"
+   "label": "Reg & Road Tax Amount"
   },
   {
    "fieldname": "road_cgst_rate",
@@ -334,7 +335,8 @@
    "default": "I agree to the provided estimate and confirm my understanding of the terms, waiving any future disputes regarding the same.",
    "fieldname": "declaration",
    "fieldtype": "Text Editor",
-   "label": "Declaration"
+   "label": "Declaration",
+   "permlevel": 2
   },
   {
    "fieldname": "booking_details_tab",
@@ -344,6 +346,8 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Company",
    "options": "Company",
    "reqd": 1
@@ -351,6 +355,7 @@
   {
    "fieldname": "cost_center",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Cost Center",
    "options": "Cost Center",
    "reqd": 1
@@ -463,8 +468,9 @@
   },
   {
    "fieldname": "provider",
-   "fieldtype": "Data",
-   "label": "Provider"
+   "fieldtype": "Link",
+   "label": "Provider",
+   "options": "Insurance Provider"
   },
   {
    "fieldname": "column_break_tyje",
@@ -513,13 +519,14 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 15:02:40.345404",
+ "modified": "2026-02-23 16:20:46.437536",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
  "owner": "Administrator",
  "permissions": [
   {
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -528,6 +535,44 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "permlevel": 2,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Master Manager",
    "share": 1,
    "submit": 1,
    "write": 1

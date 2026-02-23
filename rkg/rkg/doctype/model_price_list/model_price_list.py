@@ -7,8 +7,8 @@ from frappe.model.document import Document
 class ModelPriceList(Document):
 	def validate(self):
 		if not self.general_insurance_provider:
-			settings = frappe.get_doc("RKG Settings","RKG Settings")
+			settings = frappe.get_doc("RKG Settings",self.company)
 			self.db_set("general_insurance_provider",settings.default_general_insurance_provider)
 		if not self.nd_insurance_provider:
-			settings = frappe.get_doc("RKG Settings","RKG Settings")
+			settings = frappe.get_doc("RKG Settings",self.company)
 			self.db_set("nd_insurance_provider",settings.default_nd_insurance_provider)

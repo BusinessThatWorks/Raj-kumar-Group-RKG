@@ -1,11 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:company",
  "creation": "2026-01-30 12:05:25.604495",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "default_supplier",
+  "column_break_iljs",
+  "company",
   "section_break_giuc",
   "cgst_rate_vehicle",
   "default_cgst_rate_service",
@@ -75,15 +78,27 @@
    "fieldtype": "Link",
    "label": "Default ND Insurance Provider",
    "options": "Insurance Provider"
+  },
+  {
+   "fieldname": "column_break_iljs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-21 16:59:28.678228",
+ "modified": "2026-02-23 16:09:03.095128",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "RKG Settings",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

@@ -9,6 +9,8 @@
   "model_no",
   "column_break_sadz",
   "item_group",
+  "column_break_pqhv",
+  "company",
   "section_break_mgpl",
   "ex_showroom",
   "column_break_wckd",
@@ -151,12 +153,22 @@
    "fieldtype": "Link",
    "label": "ND Insurance Provider",
    "options": "Insurance Provider"
+  },
+  {
+   "fieldname": "column_break_pqhv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-23 14:43:48.644916",
+ "modified": "2026-02-23 16:13:58.711195",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Model Price List",

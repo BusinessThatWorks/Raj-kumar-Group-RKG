@@ -4,6 +4,9 @@ frappe.ui.form.on('Booking Form', {
         calculate_final_amount(frm);
         manage_payment_logic(frm);
         show_final_amount_top(frm);
+
+        // Road Price always auto calculated
+        frm.set_df_property("road_price", "read_only", 1);
     },
 
     // ================= CUSTOMER FETCH =================
@@ -14,7 +17,6 @@ frappe.ui.form.on('Booking Form', {
         frappe.db.get_doc("Customer", frm.doc.customer)
             .then(doc => {
 
-                // Make fields editable
                 frm.set_df_property("customer_name", "read_only", 0);
                 frm.set_df_property("mobile_no", "read_only", 0);
                 frm.set_df_property("address", "read_only", 0);
@@ -27,7 +29,6 @@ frappe.ui.form.on('Booking Form', {
                 safe_set(frm, "pin", doc.custom_pin);
                 safe_set(frm, "post_office", doc.custom_post_office);
                 safe_set(frm, "district", doc.custom_district);
-                
 
                 let clean_address = (doc.primary_address || "")
                     .replace(/<br\s*\/?>/gi, "\n")
@@ -35,33 +36,6 @@ frappe.ui.form.on('Booking Form', {
                     .trim();
 
                 safe_set(frm, "address", clean_address);
-
-                // Nominee Logic
-                let nominee_options = [];
-                let so_options = [];
-
-                if (doc.fathers_name) {
-                    nominee_options.push(doc.fathers_name + " (Father)");
-                    so_options.push(doc.fathers_name + " (Father)");
-                }
-
-                if (doc.mothers_name)
-                    nominee_options.push(doc.mothers_name + " (Mother)");
-
-                if (doc.wife_name)
-                    nominee_options.push(doc.wife_name + " (Wife)");
-
-                if (field_exists(frm, "nominee")) {
-                    frm.set_df_property("nominee", "options", nominee_options.join("\n"));
-                    frm.set_value("nominee", "");
-                    frm.set_df_property("nominee", "read_only", 0);
-                }
-
-                if (field_exists(frm, "so")) {
-                    frm.set_df_property("so", "options", so_options.join("\n"));
-                    frm.set_value("so", "");
-                    frm.set_df_property("so", "read_only", 0);
-                }
             });
     },
 
@@ -76,7 +50,12 @@ frappe.ui.form.on('Booking Form', {
                 frm._model_price_doc = doc;
 
                 safe_set(frm, "price", doc.ex_showroom);
-                safe_set(frm, "road_price", doc.registration);
+
+                // ✅ FETCH REGISTRATION FROM MODEL PRICE LIST
+                safe_set(frm, "registration_amount", doc.registration || 0);
+
+                // Auto update road price
+                update_road_price(frm);
 
                 if (!frm.doc.nd_type)
                     frm.set_value("nd_type", "Normal");
@@ -99,10 +78,42 @@ frappe.ui.form.on('Booking Form', {
             });
     },
 
+    // ================= ROAD TRIGGERS =================
+
+    registration_amount: function(frm) {
+        update_road_price(frm);
+    },
+
+    road_tax_amount: function(frm) {
+        update_road_price(frm);
+    },
+
+    road_cgst_rate: function(frm) {
+        calculate_road(frm);
+    },
+
+    road_sgst_rate: function(frm) {
+        calculate_road(frm);
+    },
+
+    // ================= ND =================
+
     nd_type: function(frm) {
         set_nd_price(frm);
         calculate_nd(frm);
     },
+
+    nd_price: calculate_nd,
+    nd_cgst_rate: calculate_nd,
+    nd_sgst_rate: calculate_nd,
+
+    // ================= TAB 1 =================
+
+    price: calculate_tab_one,
+    cgst_rate: calculate_tab_one,
+    sgst_rate: calculate_tab_one,
+
+    // ================= PAYMENT =================
 
     payment_type: function(frm) {
         manage_payment_logic(frm);
@@ -115,7 +126,6 @@ frappe.ui.form.on('Booking Form', {
     },
 
     hp_amount: function(frm) {
-
         if (frm.doc.payment_type === "Finance") {
             calculate_final_amount(frm);
             calculate_finance_from_down(frm);
@@ -126,23 +136,11 @@ frappe.ui.form.on('Booking Form', {
         if (frm.doc.payment_type === "Finance") {
             calculate_down_from_finance(frm);
         }
-    },
-
-    price: calculate_tab_one,
-    cgst_rate: calculate_tab_one,
-    sgst_rate: calculate_tab_one,
-
-    road_price: calculate_road,
-    road_cgst_rate: calculate_road,
-    road_sgst_rate: calculate_road,
-
-    nd_price: calculate_nd,
-    nd_cgst_rate: calculate_nd,
-    nd_sgst_rate: calculate_nd
+    }
 });
 
 
-// ================= SAFE FIELD CHECK =================
+// ================= SAFE =================
 
 function field_exists(frm, fieldname) {
     return frm.meta.fields.some(f => f.fieldname === fieldname);
@@ -159,7 +157,7 @@ function safe_set(frm, fieldname, value) {
 
 function set_default_gst_rates(frm) {
 
-    frappe.db.get_value("RKG Settings", {}, [
+    frappe.db.get_value("RKG Settings", frm.doc.company, [
         "cgst_rate_vehicle",
         "sgst_rate_vehicle",
         "default_cgst_rate_ins",
@@ -184,24 +182,6 @@ function set_default_gst_rates(frm) {
 }
 
 
-
-function set_nd_price(frm) {
-
-    let doc = frm._model_price_doc;
-    if (!doc) return;
-
-    if (frm.doc.nd_type === "Normal") {
-        safe_set(frm, "nd_price", doc.insurance);
-        safe_set(frm, "provider", doc.general_insurance_provider);
-    }
-
-    else if (frm.doc.nd_type === "Upgrade") {
-        safe_set(frm, "nd_price", doc.nd_accessories);
-        safe_set(frm, "provider", doc.nd_insurance_provider);
-    }
-}
-
-
 // ================= TAB 1 =================
 
 function calculate_tab_one(frm) {
@@ -220,9 +200,22 @@ function calculate_tab_one(frm) {
 
 // ================= ROAD =================
 
+function update_road_price(frm) {
+
+    let registration = frm.doc.registration_amount || 0;
+    let road_tax = frm.doc.road_tax_amount || 0;
+
+    let total = registration + road_tax;
+
+    frm.set_value("road_price", total);
+
+    calculate_road(frm);
+}
+
 function calculate_road(frm) {
 
     let base = frm.doc.road_price || 0;
+
     let cgst = (base * (frm.doc.road_cgst_rate || 0)) / 100;
     let sgst = (base * (frm.doc.road_sgst_rate || 0)) / 100;
 
@@ -235,6 +228,22 @@ function calculate_road(frm) {
 
 
 // ================= ND =================
+
+function set_nd_price(frm) {
+
+    let doc = frm._model_price_doc;
+    if (!doc) return;
+
+    if (frm.doc.nd_type === "Normal") {
+        safe_set(frm, "nd_price", doc.insurance);
+        safe_set(frm, "provider", doc.general_insurance_provider);
+    }
+
+    else if (frm.doc.nd_type === "Upgrade") {
+        safe_set(frm, "nd_price", doc.nd_accessories);
+        safe_set(frm, "provider", doc.nd_insurance_provider);
+    }
+}
 
 function calculate_nd(frm) {
 
@@ -250,7 +259,7 @@ function calculate_nd(frm) {
 }
 
 
-// ================= FINAL TOTAL =================
+// ================= FINAL =================
 
 function calculate_final_amount(frm) {
 
@@ -259,32 +268,25 @@ function calculate_final_amount(frm) {
         (frm.doc.road_total || 0) +
         (frm.doc.nd_total || 0);
 
-    let hp = 0;
+    let hp = frm.doc.payment_type === "Finance" ? (frm.doc.hp_amount || 0) : 0;
 
-    if (frm.doc.payment_type === "Finance") {
-        hp = frm.doc.hp_amount || 0;
-    }
-
-    let final_total = base_total + hp;
-
-    frm.set_value("final_amount", final_total);
+    frm.set_value("final_amount", base_total + hp);
 
     show_final_amount_top(frm);
 }
 
 
-// ================= PAYMENT LOGIC =================
+// ================= PAYMENT =================
+
 function manage_payment_logic(frm) {
 
     if (frm.doc.payment_type === "Cash") {
 
-        // Remove mandatory
         frm.set_df_property("down_payment_amount", "reqd", 0);
         frm.set_df_property("finance_amount", "reqd", 0);
         frm.set_df_property("hp_amount", "reqd", 0);
         frm.set_df_property("hypothecated_bank", "reqd", 0);
 
-        // Reset finance values
         frm.set_value("hp_amount", 0);
         frm.set_value("finance_amount", 0);
 
@@ -295,16 +297,13 @@ function manage_payment_logic(frm) {
 
     else if (frm.doc.payment_type === "Finance") {
 
-        // Make mandatory
         frm.set_df_property("down_payment_amount", "reqd", 1);
         frm.set_df_property("finance_amount", "reqd", 1);
         frm.set_df_property("hp_amount", "reqd", 1);
         frm.set_df_property("hypothecated_bank", "reqd", 1);
 
-        // Default HP = 500 if empty
-        if (!frm.doc.hp_amount || frm.doc.hp_amount === 0) {
+        if (!frm.doc.hp_amount)
             frm.set_value("hp_amount", 500);
-        }
 
         calculate_final_amount(frm);
         calculate_finance_from_down(frm);
@@ -312,37 +311,34 @@ function manage_payment_logic(frm) {
 }
 
 
-// ================= FINANCE FROM DOWN / HP =================
+// ================= FINANCE =================
 
 function calculate_finance_from_down(frm) {
 
-    let final_amount = frm.doc.final_amount || 0;
+    let final = frm.doc.final_amount || 0;
     let down = frm.doc.down_payment_amount || 0;
     let hp = frm.doc.hp_amount || 0;
 
-    let finance = final_amount - down - hp;
+    let finance = final - down - hp;
     if (finance < 0) finance = 0;
 
     safe_set(frm, "finance_amount", finance);
 }
 
-
-// ================= DOWN FROM FINANCE =================
-
 function calculate_down_from_finance(frm) {
 
-    let final_amount = frm.doc.final_amount || 0;
+    let final = frm.doc.final_amount || 0;
     let finance = frm.doc.finance_amount || 0;
     let hp = frm.doc.hp_amount || 0;
 
-    let down = final_amount - finance - hp;
+    let down = final - finance - hp;
     if (down < 0) down = 0;
 
     safe_set(frm, "down_payment_amount", down);
 }
 
 
-// ================= TOP DISPLAY =================
+// ================= DASHBOARD =================
 
 function show_final_amount_top(frm) {
 
@@ -352,11 +348,7 @@ function show_final_amount_top(frm) {
     let formatted = format_currency(final, frm.doc.currency);
 
     frm.dashboard.set_headline(
-        `<div style="
-            text-align:right;
-            font-size:18px;
-            font-weight:600;
-            padding-right:30px;">
+        `<div style="text-align:right;font-size:18px;font-weight:600;padding-right:30px;">
             Final Amount: ${formatted}
         </div>`
     );
