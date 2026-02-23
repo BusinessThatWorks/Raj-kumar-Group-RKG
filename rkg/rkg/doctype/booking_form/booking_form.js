@@ -14,15 +14,27 @@ frappe.ui.form.on('Booking Form', {
         frappe.db.get_doc("Customer", frm.doc.customer)
             .then(doc => {
 
+                // Make fields editable
+                frm.set_df_property("customer_name", "read_only", 0);
+                frm.set_df_property("mobile_no", "read_only", 0);
+                frm.set_df_property("address", "read_only", 0);
+                frm.set_df_property("pin", "read_only", 0);
+
                 safe_set(frm, "customer_name", doc.customer_name);
                 safe_set(frm, "mobile_no", doc.mobile_no);
+                safe_set(frm, "pin", doc.custom_pin);
+                safe_set(frm, "post_office", doc.custom_post_office);
+                safe_set(frm, "district", doc.custom_district);
+                
+
                 let clean_address = (doc.primary_address || "")
-                    .replace(/<br\s*\/?>/gi, "\n")   // convert <br> to new line
-                    .replace(/<\/?[^>]+(>|$)/g, "")  // remove any other HTML tags
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<\/?[^>]+(>|$)/g, "")
                     .trim();
 
                 safe_set(frm, "address", clean_address);
 
+                // Nominee Logic
                 let nominee_options = [];
                 let so_options = [];
 
@@ -40,11 +52,13 @@ frappe.ui.form.on('Booking Form', {
                 if (field_exists(frm, "nominee")) {
                     frm.set_df_property("nominee", "options", nominee_options.join("\n"));
                     frm.set_value("nominee", "");
+                    frm.set_df_property("nominee", "read_only", 0);
                 }
 
                 if (field_exists(frm, "so")) {
                     frm.set_df_property("so", "options", so_options.join("\n"));
                     frm.set_value("so", "");
+                    frm.set_df_property("so", "read_only", 0);
                 }
             });
     },

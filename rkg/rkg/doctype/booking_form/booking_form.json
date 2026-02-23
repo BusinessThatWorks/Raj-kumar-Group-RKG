@@ -22,6 +22,7 @@
   "ref_no",
   "expected_delivery_date",
   "police_station",
+  "rto",
   "post_office",
   "district",
   "pin",
@@ -409,28 +410,26 @@
    "reqd": 1
   },
   {
-   "fetch_from": "customer.custom_police_station",
+   "fetch_from": "customer.police_station",
    "fieldname": "police_station",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Police Station",
+   "options": "Police Station",
    "reqd": 1
   },
   {
-   "fetch_from": "customer.custom_post_office",
    "fieldname": "post_office",
    "fieldtype": "Data",
    "label": "Post Office",
    "reqd": 1
   },
   {
-   "fetch_from": "customer.custom_district",
    "fieldname": "district",
    "fieldtype": "Data",
    "label": "District",
    "reqd": 1
   },
   {
-   "fetch_from": "customer.custom_pin",
    "fieldname": "pin",
    "fieldtype": "Data",
    "label": "Pin",
@@ -469,13 +468,21 @@
   {
    "fieldname": "column_break_tyje",
    "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "customer.custom_rto",
+   "fieldname": "rto",
+   "fieldtype": "Link",
+   "label": "RTO",
+   "options": "RTO Master",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-21 17:39:28.038658",
+ "modified": "2026-02-23 12:54:10.982929",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
