@@ -359,20 +359,103 @@ function calculate_down_from_finance(frm) {
 
 function show_final_amount_top(frm) {
 
-    frm.dashboard.clear_headline();
+    // Remove existing (only inside this form)
+    frm.$wrapper.find("#final-amount-sticky").remove();
 
     let final = frm.doc.final_amount || 0;
     let formatted = format_currency(final, frm.doc.currency);
 
-    frm.dashboard.set_headline(
-        `<div style="
-            text-align:right;
-            font-size:18px;
-            font-weight:600;
-            padding-right:30px;">
-            Final Amount: ${formatted}
-        </div>`
-    );
+    let html = `
+        <div id="final-amount-sticky">
+            
+            <div class="final-header">
+                <span>Final Amount</span>
+                <button id="close-final-box">✕</button>
+            </div>
+
+            <div class="final-value">
+                ${formatted}
+            </div>
+
+        </div>
+    `;
+
+    // Append ONLY inside this form
+    frm.$wrapper.append(html);
+
+    // Add style only once
+    if (!document.getElementById("booking-final-style")) {
+        let style = document.createElement("style");
+        style.id = "booking-final-style";
+        style.innerHTML = `
+            #final-amount-sticky {
+                position: fixed;
+                top: 250px;
+                right: 20px;
+                width: 180px;
+                background: #ffffff;
+                border: 2px solid #0d6efd;
+                border-radius: 12px;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+                padding: 10px;
+                z-index: 1000;
+                transition: all 0.3s ease;
+            }
+
+            .final-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 13px;
+                font-weight: 600;
+                color: #555;
+                margin-bottom: 6px;
+            }
+
+            .final-header button {
+                background: transparent;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+                color: #999;
+            }
+
+            .final-header button:hover {
+                color: #000;
+            }
+
+            .final-value {
+                font-size: 20px;
+                font-weight: 700;
+                color: #0d6efd;
+            }
+
+            @media (max-width: 768px) {
+                #final-amount-sticky {
+                    top: auto;
+                    bottom: 0;
+                    right: 0;
+                    left: 0;
+                    width: 100%;
+                    border-radius: 15px 15px 0 0;
+                    border: none;
+                    border-top: 3px solid #0d6efd;
+                    text-align: center;
+                    box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+                }
+
+                .final-value {
+                    font-size: 18px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Close button only for this form
+    frm.$wrapper.find("#close-final-box").click(function () {
+        frm.$wrapper.find("#final-amount-sticky").fadeOut(200);
+    });
 }
 
 function adjust_road_split(frm, changed_field) {

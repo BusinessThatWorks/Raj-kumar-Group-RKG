@@ -298,16 +298,34 @@ def create_purchase_receipt(load_dispatch):
         ):
             frappe.throw("Purchase Receipt already created for this Load Dispatch")
 
-        supplier = frappe.db.get_value("RKG Settings", {}, "default_supplier")
-        if not supplier:
-            frappe.throw("Default Supplier not set in RKG Settings")
-
         if not ld.warehouse:
             frappe.throw("Warehouse not set in Load Dispatch")
 
+        # ✅ Step 1: Get Company from Warehouse
+        company = frappe.db.get_value(
+            "Warehouse",
+            ld.warehouse,
+            "company"
+        )
+
+        if not company:
+            frappe.throw("Company not found from Warehouse")
+
+        # ✅ Step 2: Get Default Supplier from RKG Settings (company-wise)
+        supplier = frappe.db.get_value(
+            "RKG Settings",
+            company,
+            "default_supplier"
+        )
+
+        if not supplier:
+            frappe.throw(f"Default Supplier not set in RKG Settings for Company {company}")
+
+        # ✅ Create Purchase Receipt
         pr = frappe.new_doc("Purchase Receipt")
+        pr.company = company
         pr.supplier = supplier
-        pr.posting_date = getdate()
+        pr.posting_date = frappe.utils.getdate()
         pr.set_posting_time = 1
         pr.set_warehouse = ld.warehouse
 
@@ -328,10 +346,13 @@ def create_purchase_receipt(load_dispatch):
             })
 
         pr.insert(ignore_permissions=True)
+        pr.submit()
 
+        # ✅ Update Load Dispatch
         ld.db_set("total_receipt_quantity", 1)
         ld.db_set("status", "Received")
 
+        # ✅ Update Load Plan
         if ld.linked_load_reference_no:
             frappe.db.set_value(
                 "Load Plan",
@@ -345,7 +366,6 @@ def create_purchase_receipt(load_dispatch):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Create Purchase Receipt Failed")
         frappe.throw("Purchase Receipt creation failed. Please check Error Log.")
-
 
 # =====================================================
 # GET ITEMS
