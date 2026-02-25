@@ -44,9 +44,11 @@
   "section_break_nvyi",
   "down_payment_amount",
   "hp_amount",
+  "delivery_order",
   "column_break_ljbb",
   "finance_amount",
   "hypothecated_bank",
+  "other_bank_name",
   "section_break_unnx",
   "final_amount",
   "section_break_j6ab",
@@ -54,7 +56,7 @@
   "tab_2_tab",
   "road_hsn_code",
   "section_break_mpcx",
-  "registration_amount",
+  "reg_and_road_tax",
   "column_break_qyrw",
   "road_tax_amount",
   "section_break_bfmx",
@@ -64,7 +66,7 @@
   "road_sgst_rate",
   "road_sgst_amount",
   "column_break_smmw",
-  "road_price",
+  "registration_amount",
   "road_total",
   "nd_insurance_tab",
   "nd_type",
@@ -84,6 +86,12 @@
   "other_tab",
   "extended_warrantyew",
   "ex_warranty_amount",
+  "saved_amount",
+  "section_break_mnbb",
+  "discount_amount",
+  "discount_approved",
+  "column_break_bglz",
+  "approver",
   "terms_tab",
   "declaration"
  ],
@@ -152,7 +160,8 @@
    "fieldname": "item",
    "fieldtype": "Link",
    "label": "Model",
-   "options": "Model Price List"
+   "options": "Model Price List",
+   "reqd": 1
   },
   {
    "fieldname": "hsn_code",
@@ -196,12 +205,6 @@
    "fieldname": "road_hsn_code",
    "fieldtype": "Data",
    "label": "HSN/SAC"
-  },
-  {
-   "fieldname": "road_price",
-   "fieldtype": "Currency",
-   "label": "Reg & Road Tax Amount",
-   "read_only": 1
   },
   {
    "fieldname": "road_cgst_rate",
@@ -393,7 +396,8 @@
   {
    "fieldname": "expected_delivery_date",
    "fieldtype": "Date",
-   "label": "Expected Delivery Date"
+   "label": "Expected Delivery Date",
+   "reqd": 1
   },
   {
    "fieldname": "remarks",
@@ -455,6 +459,7 @@
    "label": "HP Amount"
   },
   {
+   "default": "Today",
    "fieldname": "booking_date",
    "fieldtype": "Date",
    "label": "Date",
@@ -522,19 +527,71 @@
    "fieldname": "extended_warrantyew",
    "fieldtype": "Select",
    "label": "Extended Warranty(EW)",
-   "options": "1 year\n2 Year\n3 Year\n7 year"
+   "options": "1 year\n2 Year\n3 Year\n7 year\nNot Applicable"
   },
   {
    "fieldname": "ex_warranty_amount",
    "fieldtype": "Currency",
    "label": "Amount"
+  },
+  {
+   "fieldname": "other_bank_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Other Bank Name",
+   "options": "Customer Provided Hypothecated Bank"
+  },
+  {
+   "fieldname": "discount_amount",
+   "fieldtype": "Currency",
+   "label": "Discount Amount"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_approved",
+   "fieldtype": "Check",
+   "label": "Discount Approved",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_mnbb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_bglz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "reg_and_road_tax",
+   "fieldtype": "Currency",
+   "label": "Reg & Road Tax",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.payment_type==\"Finance\"",
+   "fieldname": "delivery_order",
+   "fieldtype": "Attach",
+   "label": "Delivery Order",
+   "mandatory_depends_on": "eval:doc.payment_type==\"Finance\""
+  },
+  {
+   "fieldname": "saved_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Saved Amount"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 17:26:43.329502",
+ "modified": "2026-02-25 13:13:31.303729",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

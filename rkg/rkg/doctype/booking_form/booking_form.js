@@ -1,9 +1,41 @@
 frappe.ui.form.on('Booking Form', {
+    onload: function(frm) {
+        // Hide by default immediately
+        frm.toggle_display("discount_amount", false);
+        frm.toggle_display("discount_approved", false);
+        frm.toggle_display("approver", false);
+    },
 
-    refresh: function(frm) {
+    refresh: async function(frm) {
+
         calculate_final_amount(frm);
         manage_payment_logic(frm);
+        toggle_other_bank(frm);
         show_final_amount_top(frm);
+
+        // Always re-check permission on refresh
+        await check_discount_permission(frm);
+        // Lock discount if approved
+        if (frm.doc.discount_approved == 1) {
+            frm.set_df_property("discount_amount", "read_only", 1);
+        }
+    },
+
+    onload_post_render: async function(frm) {
+        await check_discount_permission(frm);
+    },
+    after_save: async function(frm) {
+
+        // Create approval request only AFTER save
+        if (!frm.is_new() &&
+            frm.doc.discount_amount > 0 &&
+            frm.doc.discount_approved == 0) {
+
+            await create_discount_request(frm);
+
+            // 🔒 Lock discount after request
+            frm.set_df_property("discount_amount", "read_only", 1);
+        }
     },
 
     // ================= CUSTOMER FETCH =================
@@ -76,8 +108,9 @@ frappe.ui.form.on('Booking Form', {
                 frm._model_price_doc = doc;
 
                 safe_set(frm, "price", doc.ex_showroom);
-                safe_set(frm, "road_price", doc.registration);
                 safe_set(frm, "registration_amount", doc.registration);
+                safe_set(frm, "reg_and_road_tax", doc.registration);
+                safe_set(frm, "saved_amount", doc.extended_warranty);
                 safe_set(frm, "ex_warranty_amount", doc.extended_warranty);
 
                 if (!frm.doc.nd_type)
@@ -105,9 +138,32 @@ frappe.ui.form.on('Booking Form', {
         set_nd_price(frm);
         calculate_nd(frm);
     },
+    discount_amount: function(frm) {
+        validate_discount_limit(frm);
+    },
 
+    validate: function(frm) {
+        // Existing discount approval check
+        if (frm.doc.docstatus === 1 &&
+            frm.doc.discount_amount > 0 &&
+            frm.doc.discount_approved == 0) {
+            frappe.throw("Discount is pending approval. Cannot submit.");
+        }
+
+        // New: Make approver mandatory if discount_amount > 0
+        if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
+            frappe.throw("Approver is mandatory when Discount Amount is entered.");
+        }
+        validate_discount_limit(frm);
+    },
+    hypothecated_bank: function(frm) {
+        toggle_other_bank(frm);
+    },
+
+    
     payment_type: function(frm) {
         manage_payment_logic(frm);
+        toggle_other_bank(frm);
     },
 
     down_payment_amount: function(frm) {
@@ -122,7 +178,6 @@ frappe.ui.form.on('Booking Form', {
     road_tax_amount: function(frm) {
         adjust_road_split(frm, "road_tax");
     },
-
     hp_amount: function(frm) {
 
         if (frm.doc.payment_type === "Finance") {
@@ -139,12 +194,20 @@ frappe.ui.form.on('Booking Form', {
     ex_warranty_amount: function(frm) {
         calculate_final_amount(frm);
     },
-
+    extended_warrantyew: function(frm){
+        if(frm.doc.extended_warrantyew == 'Not Applicable')
+        {
+            safe_set(frm, "ex_warranty_amount", "");
+        }else
+        {
+            safe_set(frm, "ex_warranty_amount", frm.doc.saved_amount);
+        }
+    },
     price: calculate_tab_one,
     cgst_rate: calculate_tab_one,
     sgst_rate: calculate_tab_one,
 
-    road_price: calculate_road,
+    // road_price: calculate_road,
     road_cgst_rate: calculate_road,
     road_sgst_rate: calculate_road,
 
@@ -166,6 +229,24 @@ function safe_set(frm, fieldname, value) {
     }
 }
 
+
+function toggle_other_bank(frm) {
+
+    if (frm.doc.payment_type === "Finance" &&
+        frm.doc.hypothecated_bank === "Others") {
+
+        // Show + Mandatory
+        frm.set_df_property("other_bank_name", "hidden", 0);
+        frm.set_df_property("other_bank_name", "reqd", 1);
+
+    } else {
+
+        // Hide + Not Mandatory + Clear
+        frm.set_df_property("other_bank_name", "hidden", 1);
+        frm.set_df_property("other_bank_name", "reqd", 0);
+        frm.set_value("other_bank_name", "");
+    }
+}
 
 // ================= GST FETCH =================
 
@@ -234,17 +315,21 @@ function calculate_tab_one(frm) {
 
 function calculate_road(frm) {
 
-    let base = frm.doc.road_price || 0;
-    let cgst = (base * (frm.doc.road_cgst_rate || 0)) / 100;
-    let sgst = (base * (frm.doc.road_sgst_rate || 0)) / 100;
+    let base = frm.doc.registration_amount || 0;
+
+    let cgst_rate = frm.doc.road_cgst_rate || 0;
+    let sgst_rate = frm.doc.road_sgst_rate || 0;
+
+    let cgst = (base * cgst_rate) / 100;
+    let sgst = (base * sgst_rate) / 100;
 
     safe_set(frm, "road_cgst_amount", cgst);
     safe_set(frm, "road_sgst_amount", sgst);
+
     safe_set(frm, "road_total", base + cgst + sgst);
 
     calculate_final_amount(frm);
 }
-
 
 // ================= ND =================
 
@@ -270,7 +355,7 @@ function calculate_final_amount(frm) {
         (frm.doc.amount || 0) +
         (frm.doc.road_total || 0) +
         (frm.doc.nd_total || 0) +
-        (frm.doc.ex_warranty_amount || 0);  
+        (frm.doc.ex_warranty_amount || 0);
 
     let hp = 0;
 
@@ -278,7 +363,14 @@ function calculate_final_amount(frm) {
         hp = frm.doc.hp_amount || 0;
     }
 
-    let final_total = base_total + hp;
+    let discount = 0;
+    if (frm.doc.discount_approved == 1) {
+        discount = frm.doc.discount_amount || 0;
+    }
+
+    let final_total = base_total + hp - discount;
+
+    if (final_total < 0) final_total = 0;
 
     frm.set_value("final_amount", final_total);
 
@@ -291,11 +383,18 @@ function manage_payment_logic(frm) {
 
     if (frm.doc.payment_type === "Cash") {
 
-        // Remove mandatory
         frm.set_df_property("down_payment_amount", "reqd", 0);
         frm.set_df_property("finance_amount", "reqd", 0);
         frm.set_df_property("hp_amount", "reqd", 0);
         frm.set_df_property("hypothecated_bank", "reqd", 0);
+
+        // Clear bank
+        frm.set_value("hypothecated_bank", "");
+
+        // Hide + reset Other Bank field
+        frm.set_df_property("other_bank_name", "hidden", 1);
+        frm.set_df_property("other_bank_name", "reqd", 0);
+        frm.set_value("other_bank_name", "");
 
         // Reset finance values
         frm.set_value("hp_amount", 0);
@@ -458,29 +557,135 @@ function show_final_amount_top(frm) {
     });
 }
 
+
 function adjust_road_split(frm, changed_field) {
 
-    let road_price = frm.doc.road_price || 0;
-    let registration = frm.doc.registration_amount || 0;
+    let master_total = frm.doc.reg_and_road_tax || 0;
+
     let road_tax = frm.doc.road_tax_amount || 0;
 
-    // If registration changed → adjust road tax
-    if (changed_field === "registration") {
+    frm.set_df_property("reg_and_road_tax", "read_only", 1);
 
-        let new_road_tax = road_price - registration;
-        if (new_road_tax < 0) new_road_tax = 0;
-
-        frm.set_value("road_tax_amount", new_road_tax);
-    }
-
-    // If road tax changed → adjust registration
+    // Road tax changed → calculate registration amount
     if (changed_field === "road_tax") {
 
-        let new_registration = road_price - road_tax;
-        if (new_registration < 0) new_registration = 0;
+        let registration_value = master_total - road_tax;
 
-        frm.set_value("registration_amount", new_registration);
+        if (registration_value < 0)
+            registration_value = 0;
+
+        frm.set_value("registration_amount", registration_value);
     }
 
     calculate_road(frm);
+}
+async function check_discount_permission(frm) {
+
+    frm.allowed_discount_percent = 0;
+
+    // Hide first
+    frm.toggle_display("discount_amount", false);
+    frm.toggle_display("discount_approved", false);
+    frm.toggle_display("approver", false);
+
+    let approval = await frappe.db.get_list("Discount Approval", {
+        filters: {
+            approval_user: frappe.session.user
+        },
+        fields: ["discount_percent"],
+        limit: 1
+    });
+
+    if (approval && approval.length > 0) {
+
+        frm.allowed_discount_percent =
+            approval[0].discount_percent || 0;
+
+        frm.toggle_display("discount_amount", true);
+        frm.toggle_display("discount_approved", true);
+        frm.toggle_display("approver", true);
+    }
+}
+
+function validate_discount_limit(frm) {
+
+    let allowed_percent = frm.allowed_discount_percent || 0;
+    let final_amount = frm.doc.final_amount || 0;
+    let discount_amount = frm.doc.discount_amount || 0;
+
+    // ✅ NEW: If approved → skip limit validation completely
+    if (frm.doc.discount_approved == 1) {
+        return;
+    }
+
+    // 🚫 No permission but entered discount
+    if (allowed_percent === 0 && discount_amount > 0) {
+        frappe.throw("You are not allowed to give discount.");
+    }
+
+    if (!final_amount) return;
+
+    let max_allowed = (final_amount * allowed_percent) / 100;
+
+    if (discount_amount > max_allowed) {
+
+        frappe.throw({
+            title: "Discount Limit Exceeded",
+            message: `Maximum allowed discount is ${allowed_percent}% 
+            (₹ ${max_allowed.toFixed(2)})`,
+            indicator: "red"
+        });
+    }
+}
+
+async function create_discount_request(frm) {
+    if (!frm.doc.name) return;
+
+    // 🔒 Prevent duplicate pending request
+    let existing = await frappe.db.get_list("Discount Approval Request", {
+        filters: {
+            booking_form: frm.doc.name,
+            status: "Pending"
+        },
+        limit: 1
+    });
+
+    if (existing.length > 0) return;
+
+    let approver_user = frm.doc.approver;
+
+    if (!approver_user) {
+        frappe.msgprint("Approver is not set in this booking.");
+        return;
+    }
+
+    // ✅ Get the approver's discount limit
+    let approval = await frappe.db.get_list("Discount Approval", {
+        filters: { approval_user: approver_user },
+        fields: ["discount_percent"],
+        limit: 1
+    });
+
+    let allowed_percent = 0;
+    if (approval && approval.length > 0) {
+        allowed_percent = approval[0].discount_percent;
+    }
+
+    await frappe.call({
+        method: "frappe.client.insert",
+        args: {
+            doc: {
+                doctype: "Discount Approval Request",
+                booking_form: frm.doc.name,
+                requested_by: frappe.session.user,
+                approver: approver_user,
+                discount_amount: frm.doc.discount_amount,
+                allowed_percent: allowed_percent,
+                final_amount: frm.doc.final_amount,
+                status: "Pending"
+            }
+        }
+    });
+
+    frappe.msgprint("Discount approval request sent to " + approver_user);
 }

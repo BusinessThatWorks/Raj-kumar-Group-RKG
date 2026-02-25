@@ -5,17 +5,14 @@ from rkg.utils.common import fiscal_year_set
 
 def autoname_booking_form_entry(doc, method=None):
 
-    # 1️⃣ Booking Date required
     if not doc.booking_date:
         frappe.throw("Booking Date is required")
 
     booking_date = getdate(doc.booking_date)
 
-    # 2️⃣ Cost Center required
     if not doc.cost_center:
         frappe.throw("Cost Center is required")
 
-    # 3️⃣ Get Cost Center Abbreviation
     cc_abbr = frappe.db.get_value(
         "Cost Center",
         doc.cost_center,
@@ -25,7 +22,6 @@ def autoname_booking_form_entry(doc, method=None):
     if not cc_abbr:
         frappe.throw("Cost Center abbreviation not found")
 
-    # 4️⃣ Get Fiscal Year
     fy = fiscal_year_set(booking_date)
 
     if not fy:
@@ -40,7 +36,7 @@ def autoname_booking_form_entry(doc, method=None):
 
     prefix = f"{cc_abbr}-BO-{fy_code}-"
 
-    # 6️⃣ Get Last Sequence
+    # Get last sequence
     last = frappe.db.sql(
         """
         SELECT name FROM `tabBooking Form`
@@ -53,11 +49,13 @@ def autoname_booking_form_entry(doc, method=None):
     )
 
     seq = 1
+
     if last:
         try:
             seq = int(last[0][0].split("-")[-1]) + 1
-        except:
+        except Exception:
             seq = 1
 
-    # 7️⃣ Final Name
     doc.name = f"{prefix}{str(seq).zfill(4)}"
+
+    return doc.name
