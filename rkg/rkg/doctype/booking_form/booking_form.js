@@ -24,6 +24,22 @@ frappe.ui.form.on('Booking Form', {
     onload_post_render: async function(frm) {
         await check_discount_permission(frm);
     },
+    before_submit: function(frm) {
+
+        // If discount entered but not approved
+        if (frm.doc.discount_amount > 0 && frm.doc.discount_approved == 0) {
+
+            frappe.msgprint({
+                title: "Discount Not Approved",
+                message: "Discount is not approved. Discount Amount and Approver have been cleared.",
+                indicator: "orange"
+            });
+
+            // Clear values
+            frm.set_value("discount_amount", 0);
+            frm.set_value("approver", "");
+        }
+    },
     after_save: async function(frm) {
 
         // Create approval request only AFTER save
@@ -144,11 +160,11 @@ frappe.ui.form.on('Booking Form', {
 
     validate: function(frm) {
         // Existing discount approval check
-        if (frm.doc.docstatus === 1 &&
-            frm.doc.discount_amount > 0 &&
-            frm.doc.discount_approved == 0) {
-            frappe.throw("Discount is pending approval. Cannot submit.");
-        }
+        // if (frm.doc.docstatus === 1 &&
+        //     frm.doc.discount_amount > 0 &&
+        //     frm.doc.discount_approved == 0) {
+        //     frappe.throw("Discount is pending approval. Cannot submit.");
+        // }
 
         // New: Make approver mandatory if discount_amount > 0
         if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
@@ -288,7 +304,7 @@ function set_nd_price(frm) {
         safe_set(frm, "provider", doc.general_insurance_provider);
     }
 
-    else if (frm.doc.nd_type === "Upgrade") {
+    else if (frm.doc.nd_type === "ND") {
         safe_set(frm, "nd_price", doc.nd_accessories);
         safe_set(frm, "provider", doc.nd_insurance_provider);
     }
