@@ -83,6 +83,8 @@
   "column_break_udhs",
   "nd_price",
   "nd_total",
+  "non_honda_accessories_tab",
+  "hirise_accessories_bills_tab",
   "other_tab",
   "extended_warrantyew",
   "ex_warranty_amount",
@@ -470,6 +472,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "final_amount",
    "fieldtype": "Currency",
    "label": "Final Amount"
@@ -542,15 +545,18 @@
    "options": "Customer Provided Hypothecated Bank"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount"
   },
   {
-   "default": "0",
+   "allow_on_submit": 1,
+   "default": "Pending",
    "fieldname": "discount_approved",
-   "fieldtype": "Check",
+   "fieldtype": "Select",
    "label": "Discount Approved",
+   "options": "Approved\nReject\nPending",
    "read_only": 1
   },
   {
@@ -577,21 +583,30 @@
    "depends_on": "eval:doc.payment_type==\"Finance\"",
    "fieldname": "delivery_order",
    "fieldtype": "Attach",
-   "label": "Delivery Order",
-   "mandatory_depends_on": "eval:doc.payment_type==\"Finance\""
+   "label": "Delivery Order"
   },
   {
    "fieldname": "saved_amount",
    "fieldtype": "Currency",
    "hidden": 1,
    "label": "Saved Amount"
+  },
+  {
+   "fieldname": "non_honda_accessories_tab",
+   "fieldtype": "Tab Break",
+   "label": "Non Honda Accessories"
+  },
+  {
+   "fieldname": "hirise_accessories_bills_tab",
+   "fieldtype": "Tab Break",
+   "label": "HIRISE Accessories Bills"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-25 16:12:17.844398",
+ "modified": "2026-02-26 13:16:57.390227",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

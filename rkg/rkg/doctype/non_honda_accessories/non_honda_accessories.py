@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class DiscountApprovalRequest(Document):
+class NonHondaAccessories(Document):
 	pass

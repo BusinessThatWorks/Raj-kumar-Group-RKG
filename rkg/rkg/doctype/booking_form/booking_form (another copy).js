@@ -1,77 +1,60 @@
 frappe.ui.form.on('Booking Form', {
+    onload: function(frm) {
+        // Hide by default immediately
+        frm.toggle_display("discount_amount", false);
+        frm.toggle_display("discount_approved", false);
+        frm.toggle_display("approver", false);
+    },
+
     refresh: async function(frm) {
 
-        // 🔒 Only recalculate in Draft
-        if (frm.doc.docstatus === 0) {
-            calculate_final_amount(frm);
-        }
-
+        calculate_final_amount(frm);
         manage_payment_logic(frm);
         toggle_other_bank(frm);
-
-        // Always show UI box (no calculation inside)
         show_final_amount_top(frm);
 
-        await control_discount_fields(frm);
-
-        // Submitted button
-        if (frm.doc.docstatus === 1) {
-            add_generate_decision_button(frm);
+        // Always re-check permission on refresh
+        await check_discount_permission(frm);
+        // Lock discount if approved
+        if (frm.doc.discount_approved == 1) {
+            frm.set_df_property("discount_amount", "read_only", 1);
         }
     },
-    approver: async function(frm) {
 
-            frm.allowed_discount_percent = 0;
+    onload_post_render: async function(frm) {
+        await check_discount_permission(frm);
+    },
+    before_submit: function(frm) {
 
-            if (!frm.doc.approver) return;
+        // If discount entered but not approved
+        if (frm.doc.discount_amount > 0 && frm.doc.discount_approved == 0) {
 
-            let approval = await frappe.db.get_list("Discount Approval", {
-                filters: {
-                    approval_user: frm.doc.approver
-                },
-                fields: ["discount_percent"],
-                limit: 1
+            frappe.msgprint({
+                title: "Discount Not Approved",
+                message: "Discount is not approved. Discount Amount and Approver have been cleared.",
+                indicator: "orange"
             });
 
-            if (approval && approval.length > 0) {
-                frm.allowed_discount_percent = approval[0].discount_percent || 0;
-            }
-        },
-    // ================= DISCOUNT =================
+            // Clear values
+            frm.set_value("discount_amount", 0);
+            frm.set_value("approver", "");
+        }
+    },
+    after_save: async function(frm) {
 
-    discount_amount: async function(frm) {
-
-        validate_discount_limit(frm);
-        calculate_final_amount(frm);
-
-        // 🔥 AFTER SUBMIT → Auto Pending + Create Request
-        if (frm.doc.docstatus === 1) {
-
-            frm.set_value("discount_approved", "Pending");
+        // Create approval request only AFTER save
+        if (!frm.is_new() &&
+            frm.doc.discount_amount > 0 &&
+            frm.doc.discount_approved == 0) {
 
             await create_discount_request(frm);
 
-            frappe.show_alert({
-                message: "Discount updated. Approval request sent.",
-                indicator: "orange"
-            });
+            // 🔒 Lock discount after request
+            frm.set_df_property("discount_amount", "read_only", 1);
         }
     },
 
-    validate: function(frm) {
-
-        if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
-            frappe.throw("Approver is mandatory when Discount Amount is entered.");
-        }
-
-        validate_discount_limit(frm);
-
-        if (!frm.doc.discount_approved) {
-            frm.doc.discount_approved = "Pending";
-        }
-    },
     // ================= CUSTOMER FETCH =================
-
     customer: function(frm) {
 
         if (!frm.doc.customer) return;
@@ -79,6 +62,7 @@ frappe.ui.form.on('Booking Form', {
         frappe.db.get_doc("Customer", frm.doc.customer)
             .then(doc => {
 
+                // Make fields editable
                 frm.set_df_property("customer_name", "read_only", 0);
                 frm.set_df_property("mobile_no", "read_only", 0);
                 frm.set_df_property("address", "read_only", 0);
@@ -91,6 +75,7 @@ frappe.ui.form.on('Booking Form', {
                 safe_set(frm, "pin", doc.custom_pin);
                 safe_set(frm, "post_office", doc.custom_post_office);
                 safe_set(frm, "district", doc.custom_district);
+                
 
                 let clean_address = (doc.primary_address || "")
                     .replace(/<br\s*\/?>/gi, "\n")
@@ -99,6 +84,7 @@ frappe.ui.form.on('Booking Form', {
 
                 safe_set(frm, "address", clean_address);
 
+                // Nominee Logic
                 let nominee_options = [];
                 let so_options = [];
 
@@ -128,7 +114,6 @@ frappe.ui.form.on('Booking Form', {
     },
 
     // ================= ITEM FETCH =================
-
     item: function(frm) {
 
         if (!frm.doc.item) return;
@@ -165,17 +150,33 @@ frappe.ui.form.on('Booking Form', {
             });
     },
 
-    // ================= OTHER LOGIC =================
-
     nd_type: function(frm) {
         set_nd_price(frm);
         calculate_nd(frm);
     },
+    discount_amount: function(frm) {
+        validate_discount_limit(frm);
+    },
 
+    validate: function(frm) {
+        // Existing discount approval check
+        // if (frm.doc.docstatus === 1 &&
+        //     frm.doc.discount_amount > 0 &&
+        //     frm.doc.discount_approved == 0) {
+        //     frappe.throw("Discount is pending approval. Cannot submit.");
+        // }
+
+        // New: Make approver mandatory if discount_amount > 0
+        if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
+            frappe.throw("Approver is mandatory when Discount Amount is entered.");
+        }
+        validate_discount_limit(frm);
+    },
     hypothecated_bank: function(frm) {
         toggle_other_bank(frm);
     },
 
+    
     payment_type: function(frm) {
         manage_payment_logic(frm);
         toggle_other_bank(frm);
@@ -186,7 +187,6 @@ frappe.ui.form.on('Booking Form', {
             calculate_finance_from_down(frm);
         }
     },
-
     registration_amount: function(frm) {
         adjust_road_split(frm, "registration");
     },
@@ -194,8 +194,8 @@ frappe.ui.form.on('Booking Form', {
     road_tax_amount: function(frm) {
         adjust_road_split(frm, "road_tax");
     },
-
     hp_amount: function(frm) {
+
         if (frm.doc.payment_type === "Finance") {
             calculate_final_amount(frm);
             calculate_finance_from_down(frm);
@@ -207,23 +207,23 @@ frappe.ui.form.on('Booking Form', {
             calculate_down_from_finance(frm);
         }
     },
-
     ex_warranty_amount: function(frm) {
         calculate_final_amount(frm);
     },
-
     extended_warrantyew: function(frm){
-        if(frm.doc.extended_warrantyew == 'Not Applicable') {
+        if(frm.doc.extended_warrantyew == 'Not Applicable')
+        {
             safe_set(frm, "ex_warranty_amount", "");
-        } else {
+        }else
+        {
             safe_set(frm, "ex_warranty_amount", frm.doc.saved_amount);
         }
     },
-
     price: calculate_tab_one,
     cgst_rate: calculate_tab_one,
     sgst_rate: calculate_tab_one,
 
+    // road_price: calculate_road,
     road_cgst_rate: calculate_road,
     road_sgst_rate: calculate_road,
 
@@ -232,207 +232,6 @@ frappe.ui.form.on('Booking Form', {
     nd_sgst_rate: calculate_nd
 });
 
-
-async function control_discount_fields(frm) {
-
-    // Reset
-    frm.allowed_discount_percent = 0;
-    frm.is_discount_approver = false;
-
-    // Hide first
-    frm.toggle_display("discount_amount", false);
-    frm.toggle_display("discount_approved", false);
-    frm.toggle_display("approver", false);
-
-    frm.set_df_property("discount_amount", "read_only", 1);
-    frm.set_df_property("discount_approved", "read_only", 1);
-    frm.set_df_property("approver", "read_only", 1);
-
-    // 🔍 Check if CURRENT LOGGED USER is Discount Approver
-    let approval = await frappe.db.get_list("Discount Approval", {
-        filters: {
-            approval_user: frappe.session.user
-        },
-        fields: ["discount_percent"],
-        limit: 1
-    });
-
-    if (approval && approval.length > 0) {
-        frm.allowed_discount_percent = approval[0].discount_percent || 0;
-        frm.is_discount_approver = true;
-    }
-
-    // ==================================================
-    // 🟢 NEW DOCUMENT
-    // ==================================================
-    if (frm.is_new()) {
-
-        if (frm.is_discount_approver) {
-            frm.toggle_display("discount_amount", true);
-            frm.toggle_display("discount_approved", true);
-            frm.toggle_display("approver", true);
-
-            frm.set_df_property("discount_amount", "read_only", 0);
-            frm.set_df_property("approver", "read_only", 0);
-        }
-
-        frm.set_df_property("discount_approved", "read_only", 1);
-        return;
-    }
-
-    // Always show in existing docs
-    frm.toggle_display("discount_amount", true);
-    frm.toggle_display("discount_approved", true);
-    frm.toggle_display("approver", true);
-
-    // ==================================================
-    // 🔒 SUBMITTED DOCUMENT
-    // ==================================================
-    if (frm.doc.docstatus === 1) {
-
-        let is_creator = frm.doc.owner === frappe.session.user;
-        let is_approver = frm.doc.approver === frappe.session.user;
-
-        if (frm.doc.discount_approved === "Pending") {
-
-            if (is_creator || is_approver) {
-                frm.set_df_property("discount_amount", "read_only", 0);
-            }
-        }
-
-        // Approved / Rejected → Fully Freeze
-        if (["Approved", "Reject"].includes(frm.doc.discount_approved)) {
-
-            frm.set_df_property("discount_amount", "read_only", 1);
-            frm.set_df_property("approver", "read_only", 1);
-        }
-
-        frm.set_df_property("discount_approved", "read_only", 1);
-        return;
-    }
-
-    // ==================================================
-    // 🟡 DRAFT MODE
-    // ==================================================
-    if (frm.doc.docstatus === 0) {
-
-        if (frm.is_discount_approver) {
-            frm.set_df_property("discount_amount", "read_only", 0);
-            frm.set_df_property("approver", "read_only", 0);
-        }
-
-        frm.set_df_property("discount_approved", "read_only", 1);
-    }
-}
-
-
-function add_generate_decision_button(frm) {
-
-    if (frm.doc.docstatus !== 1) return;
-    if (!frm.doc.approver) return;
-    if (frm.doc.approver !== frappe.session.user) return;
-    if (frm.doc.discount_approved !== "Pending") return;
-
-    frm.clear_custom_buttons();
-
-    frm.add_custom_button("Discount Decision", function () {
-
-        let discount_amount = frm.doc.discount_amount || 0;
-        let formatted_amount = format_currency(discount_amount, frm.doc.currency);
-
-        let d = new frappe.ui.Dialog({
-            title: "Discount Decision",
-            fields: [
-
-                {
-                    fieldtype: "HTML",
-                    fieldname: "info_html"
-                },
-
-                {
-                    label: "Decision",
-                    fieldname: "decision",
-                    fieldtype: "Select",
-                    options: [
-                        { label: "Approved", value: "Approved" },
-                        { label: "Reject", value: "Reject" }
-                    ],
-                    reqd: 1
-                }
-            ],
-
-            primary_action_label: "Submit",
-
-            primary_action(values) {
-
-                if (!values.decision) {
-                    frappe.throw("Please select decision");
-                }
-
-                // Disable dialog primary button instead of popup
-                d.get_primary_btn().prop("disabled", true);
-
-                frappe.call({
-                    method: "rkg.rkg.doctype.booking_form.booking_form.update_discount_decision",
-                    args: {
-                        docname: frm.doc.name,
-                        decision: values.decision
-                    },
-
-                    callback: function (r) {
-
-                        if (!r.exc) {
-
-                            let success_message = "";
-
-                            if (values.decision === "Approved") {
-                                success_message = `Discount Approved for ${formatted_amount}`;
-                            } else {
-                                success_message = `Discount Rejected for ${formatted_amount}`;
-                            }
-
-                            frappe.show_alert({
-                                message: success_message,
-                                indicator: "green"
-                            });
-
-                            d.hide();
-                            frm.reload_doc();
-                        }
-
-                        d.get_primary_btn().prop("disabled", false);
-                    },
-
-                    error: function () {
-
-                        d.get_primary_btn().prop("disabled", false);
-
-                        frappe.msgprint({
-                            title: "Error",
-                            message: "Decision update failed",
-                            indicator: "red"
-                        });
-                    }
-                });
-            }
-        });
-
-        // 🔥 Set dialog HTML content
-        d.fields_dict.info_html.$wrapper.html(`
-            <div style="margin-bottom:10px; padding:10px; 
-                        background:#f8f9fa; border-radius:8px;
-                        font-weight:600;">
-                Request for Discount Amount is: 
-                <span style="color:#0d6efd;">
-                    ${formatted_amount}
-                </span>
-            </div>
-        `);
-
-        d.show();
-
-    }).addClass("btn-primary");
-}
 
 // ================= SAFE FIELD CHECK =================
 
@@ -569,66 +368,34 @@ function calculate_nd(frm) {
 function calculate_final_amount(frm) {
 
     let base_total =
-        flt(frm.doc.amount) +
-        flt(frm.doc.road_total) +
-        flt(frm.doc.nd_total) +
-        flt(frm.doc.ex_warranty_amount);
+        (frm.doc.amount || 0) +
+        (frm.doc.road_total || 0) +
+        (frm.doc.nd_total || 0) +
+        (frm.doc.ex_warranty_amount || 0);
 
-    let hp = frm.doc.payment_type === "Finance"
-        ? flt(frm.doc.hp_amount)
-        : 0;
+    let hp = 0;
+
+    if (frm.doc.payment_type === "Finance") {
+        hp = frm.doc.hp_amount || 0;
+    }
 
     let discount = 0;
-
-    // Draft
-    if (frm.doc.docstatus === 0) {
-        discount = flt(frm.doc.discount_amount);
+    if (frm.doc.discount_approved == 1) {
+        discount = frm.doc.discount_amount || 0;
     }
 
-    // Submitted + Pending
-    else if (
-        frm.doc.docstatus === 1 &&
-        frm.doc.discount_approved === "Pending"
-    ) {
-        discount = flt(frm.doc.discount_amount);
-    }
+    let final_total = base_total + hp - discount;
 
-    // Approved
-    else if (
-        frm.doc.docstatus === 1 &&
-        frm.doc.discount_approved === "Approved"
-    ) {
-        discount = flt(frm.doc.discount_amount);
-    }
+    if (final_total < 0) final_total = 0;
 
-    // Reject
-    else if (
-        frm.doc.docstatus === 1 &&
-        frm.doc.discount_approved === "Reject"
-    ) {
-        discount = 0;
-    }
-
-    let final_total = flt(base_total + hp - discount, 2);
-
-    // 🔥 Allow update in Draft + Pending only
-    if (
-        frm.doc.docstatus === 0 ||
-        (frm.doc.docstatus === 1 &&
-         frm.doc.discount_approved === "Pending")
-    ) {
-        frm.set_value("final_amount", final_total);
-    }
+    frm.set_value("final_amount", final_total);
 
     show_final_amount_top(frm);
 }
 
+
 // ================= PAYMENT LOGIC =================
 function manage_payment_logic(frm) {
-
-    if (frm.doc.docstatus === 1) return; // ✅ Freeze all payment recalculation after submit
-
-    let fnamount = frm.doc.final_amount || 0;
 
     if (frm.doc.payment_type === "Cash") {
 
@@ -637,25 +404,38 @@ function manage_payment_logic(frm) {
         frm.set_df_property("hp_amount", "reqd", 0);
         frm.set_df_property("hypothecated_bank", "reqd", 0);
 
+        // Clear bank
         frm.set_value("hypothecated_bank", "");
+
+        // Hide + reset Other Bank field
+        frm.set_df_property("other_bank_name", "hidden", 1);
+        frm.set_df_property("other_bank_name", "reqd", 0);
         frm.set_value("other_bank_name", "");
 
+        // Reset finance values
         frm.set_value("hp_amount", 0);
         frm.set_value("finance_amount", 0);
 
-        frm.set_value("down_payment_amount", fnamount);
+        calculate_final_amount(frm);
+
+        frm.set_value("down_payment_amount", frm.doc.final_amount);
     }
 
     else if (frm.doc.payment_type === "Finance") {
 
+        // Make mandatory
         frm.set_df_property("down_payment_amount", "reqd", 1);
         frm.set_df_property("finance_amount", "reqd", 1);
         frm.set_df_property("hp_amount", "reqd", 1);
         frm.set_df_property("hypothecated_bank", "reqd", 1);
 
+        // Default HP = 500 if empty
         if (!frm.doc.hp_amount || frm.doc.hp_amount === 0) {
             frm.set_value("hp_amount", 500);
         }
+
+        calculate_final_amount(frm);
+        calculate_finance_from_down(frm);
     }
 }
 
@@ -664,8 +444,6 @@ function manage_payment_logic(frm) {
 
 function calculate_finance_from_down(frm) {
 
-    if (frm.doc.docstatus === 1) return;
-
     let final_amount = frm.doc.final_amount || 0;
     let down = frm.doc.down_payment_amount || 0;
     let hp = frm.doc.hp_amount || 0;
@@ -673,14 +451,13 @@ function calculate_finance_from_down(frm) {
     let finance = final_amount - down - hp;
     if (finance < 0) finance = 0;
 
-    frm.set_value("finance_amount", finance);
+    safe_set(frm, "finance_amount", finance);
 }
+
 
 // ================= DOWN FROM FINANCE =================
 
 function calculate_down_from_finance(frm) {
-
-    if (frm.doc.docstatus === 1) return; // ✅ Freeze after submit
 
     let final_amount = frm.doc.final_amount || 0;
     let finance = frm.doc.finance_amount || 0;
@@ -689,7 +466,7 @@ function calculate_down_from_finance(frm) {
     let down = final_amount - finance - hp;
     if (down < 0) down = 0;
 
-    frm.set_value("down_payment_amount", down);
+    safe_set(frm, "down_payment_amount", down);
 }
 
 
@@ -818,23 +595,48 @@ function adjust_road_split(frm, changed_field) {
 
     calculate_road(frm);
 }
+async function check_discount_permission(frm) {
 
+    frm.allowed_discount_percent = 0;
+
+    // Hide first
+    frm.toggle_display("discount_amount", false);
+    frm.toggle_display("discount_approved", false);
+    frm.toggle_display("approver", false);
+
+    let approval = await frappe.db.get_list("Discount Approval", {
+        filters: {
+            approval_user: frappe.session.user
+        },
+        fields: ["discount_percent"],
+        limit: 1
+    });
+
+    if (approval && approval.length > 0) {
+
+        frm.allowed_discount_percent =
+            approval[0].discount_percent || 0;
+
+        frm.toggle_display("discount_amount", true);
+        frm.toggle_display("discount_approved", true);
+        frm.toggle_display("approver", true);
+    }
+}
 
 function validate_discount_limit(frm) {
 
-    if (!frm.doc.discount_amount) return;
-    if (frm.doc.discount_approved === "Approved") return;
-
     let allowed_percent = frm.allowed_discount_percent || 0;
-    let final_amount = flt(frm.doc.final_amount);
-    let discount_amount = flt(frm.doc.discount_amount);
+    let final_amount = frm.doc.final_amount || 0;
+    let discount_amount = frm.doc.discount_amount || 0;
 
-    if (!frm.doc.approver) {
-        frappe.throw("Please select Approver before giving discount.");
+    // ✅ NEW: If approved → skip limit validation completely
+    if (frm.doc.discount_approved == 1) {
+        return;
     }
 
+    // 🚫 No permission but entered discount
     if (allowed_percent === 0 && discount_amount > 0) {
-        frappe.throw("Selected approver is not allowed to give discount.");
+        frappe.throw("You are not allowed to give discount.");
     }
 
     if (!final_amount) return;
@@ -842,26 +644,18 @@ function validate_discount_limit(frm) {
     let max_allowed = (final_amount * allowed_percent) / 100;
 
     if (discount_amount > max_allowed) {
+
         frappe.throw({
             title: "Discount Limit Exceeded",
-            message: `
-                Approver Limit: ${allowed_percent}% <br>
-                Maximum Allowed: ₹ ${max_allowed.toFixed(2)}
-            `,
+            message: `Maximum allowed discount is ${allowed_percent}% 
+            (₹ ${max_allowed.toFixed(2)})`,
             indicator: "red"
         });
     }
 }
 
-
-
 async function create_discount_request(frm) {
-
     if (!frm.doc.name) return;
-    if (!frm.doc.approver) return;
-
-    // ❌ Do not create if already Approved
-    if (frm.doc.discount_approved === "Approved") return;
 
     // 🔒 Prevent duplicate pending request
     let existing = await frappe.db.get_list("Discount Approval Request", {
@@ -872,14 +666,16 @@ async function create_discount_request(frm) {
         limit: 1
     });
 
-    if (existing.length > 0) {
-        console.log("Pending request already exists");
-        return;
-    }
+    if (existing.length > 0) return;
 
     let approver_user = frm.doc.approver;
 
-    // ✅ Get approver discount limit
+    if (!approver_user) {
+        frappe.msgprint("Approver is not set in this booking.");
+        return;
+    }
+
+    // ✅ Get the approver's discount limit
     let approval = await frappe.db.get_list("Discount Approval", {
         filters: { approval_user: approver_user },
         fields: ["discount_percent"],
@@ -887,9 +683,8 @@ async function create_discount_request(frm) {
     });
 
     let allowed_percent = 0;
-
     if (approval && approval.length > 0) {
-        allowed_percent = approval[0].discount_percent || 0;
+        allowed_percent = approval[0].discount_percent;
     }
 
     await frappe.call({
@@ -908,8 +703,5 @@ async function create_discount_request(frm) {
         }
     });
 
-    frappe.show_alert({
-        message: "Discount Approval Request Created",
-        indicator: "blue"
-    });
+    frappe.msgprint("Discount approval request sent to " + approver_user);
 }
