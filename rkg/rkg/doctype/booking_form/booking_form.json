@@ -138,7 +138,6 @@
    "reqd": 1
   },
   {
-   "fetch_from": "customer.phone",
    "fieldname": "mobile",
    "fieldtype": "Data",
    "label": "Mobile",
@@ -407,8 +406,9 @@
    "label": "Remarks"
   },
   {
+   "fetch_from": "customer.nominee",
    "fieldname": "nominee",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
    "label": "Nominee"
   },
   {
@@ -419,8 +419,9 @@
    "reqd": 1
   },
   {
+   "fetch_from": "customer.fathers_name",
    "fieldname": "so",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
    "label": "S/O",
    "reqd": 1
   },
@@ -433,22 +434,21 @@
    "reqd": 1
   },
   {
+   "fetch_from": "customer.custom_post_office",
    "fieldname": "post_office",
    "fieldtype": "Data",
-   "label": "Post Office",
-   "reqd": 1
+   "label": "Post Office"
   },
   {
    "fieldname": "district",
    "fieldtype": "Data",
-   "label": "District",
+   "label": "City/District",
    "reqd": 1
   },
   {
    "fieldname": "pin",
    "fieldtype": "Data",
-   "label": "Pin",
-   "reqd": 1
+   "label": "Pin"
   },
   {
    "fieldname": "section_break_beqa",
@@ -606,7 +606,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-26 13:16:57.390227",
+ "modified": "2026-02-26 15:56:26.195433",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

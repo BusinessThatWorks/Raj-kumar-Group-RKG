@@ -1,4 +1,5 @@
 frappe.ui.form.on('Booking Form', {
+    
     refresh: async function(frm) {
 
         // 🔒 Only recalculate in Draft
@@ -72,59 +73,43 @@ frappe.ui.form.on('Booking Form', {
     },
     // ================= CUSTOMER FETCH =================
 
-    customer: function(frm) {
+   customer: function(frm) {
 
-        if (!frm.doc.customer) return;
+        if (!frm.doc.customer) {
+            frm.set_value("address", "");
+            return;
+        }
 
-        frappe.db.get_doc("Customer", frm.doc.customer)
-            .then(doc => {
+        // Step 1: Get default address name
+        frappe.call({
+            method: "frappe.contacts.doctype.address.address.get_default_address",
+            args: {
+                doctype: "Customer",
+                name: frm.doc.customer
+            },
+            callback: function(r) {
 
-                frm.set_df_property("customer_name", "read_only", 0);
-                frm.set_df_property("mobile_no", "read_only", 0);
-                frm.set_df_property("address", "read_only", 0);
-                frm.set_df_property("pin", "read_only", 0);
-                frm.set_df_property("post_office", "read_only", 0);
-                frm.set_df_property("district", "read_only", 0);
-
-                safe_set(frm, "customer_name", doc.customer_name);
-                safe_set(frm, "mobile_no", doc.mobile_no);
-                safe_set(frm, "pin", doc.custom_pin);
-                safe_set(frm, "post_office", doc.custom_post_office);
-                safe_set(frm, "district", doc.custom_district);
-
-                let clean_address = (doc.primary_address || "")
-                    .replace(/<br\s*\/?>/gi, "\n")
-                    .replace(/<\/?[^>]+(>|$)/g, "")
-                    .trim();
-
-                safe_set(frm, "address", clean_address);
-
-                let nominee_options = [];
-                let so_options = [];
-
-                if (doc.fathers_name) {
-                    nominee_options.push(doc.fathers_name + " (Father)");
-                    so_options.push(doc.fathers_name + " (Father)");
+                if (!r.message) {
+                    frm.set_value("address", "");
+                    return;
                 }
 
-                if (doc.mothers_name)
-                    nominee_options.push(doc.mothers_name + " (Mother)");
+                // Step 2: Fetch full address document
+                frappe.db.get_doc("Address", r.message)
+                    .then(address => {
 
-                if (doc.wife_name)
-                    nominee_options.push(doc.wife_name + " (Wife)");
+                        let full_address = `
+                            ${address.address_line1 || ""}`;
 
-                if (field_exists(frm, "nominee")) {
-                    frm.set_df_property("nominee", "options", nominee_options.join("\n"));
-                    frm.set_value("nominee", "");
-                    frm.set_df_property("nominee", "read_only", 0);
-                }
+                        frm.set_value("address", full_address.trim());
+                        frm.set_value("mobile", address.phone || "");
+                        frm.set_value("pin", address.pincode || "");
+                        frm.set_value("district", address.city || "");
+                    });
+                
+            }
+        });
 
-                if (field_exists(frm, "so")) {
-                    frm.set_df_property("so", "options", so_options.join("\n"));
-                    frm.set_value("so", "");
-                    frm.set_df_property("so", "read_only", 0);
-                }
-            });
     },
 
     // ================= ITEM FETCH =================
