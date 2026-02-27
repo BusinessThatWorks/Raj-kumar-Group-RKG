@@ -25,12 +25,13 @@ class BookingForm(Document):
             if not approval:
                 frappe.throw("Selected approver is not valid discount approver.")
 
+            # ✅ SAME LOGIC AS JS
             base_total = (
-                flt(self.amount) +
-                flt(self.road_total) +
-                flt(self.nd_total) +
-                flt(self.ex_warranty_amount) +
-                flt(self.road_tax_amount)
+                (self.amount or 0) +
+                (self.road_total or 0) +
+                (self.nd_total or 0) +
+                (self.ex_warranty_amount or 0) +
+                (self.road_tax_amount or 0)
             )
 
             if self.payment_type == "Finance":
@@ -109,11 +110,10 @@ def update_discount_decision(docname, decision):
         frappe.throw("Decision already taken")
 
     base_total = (
-        flt(doc.amount) +
-        flt(doc.road_total) +
-        flt(doc.nd_total) +
-        flt(doc.ex_warranty_amount) +
-        flt(doc.road_tax_amount)
+        (doc.amount or 0) +
+        (doc.road_total or 0) +
+        (doc.nd_total or 0) +
+        (doc.ex_warranty_amount or 0)
     )
 
     hp = doc.hp_amount or 0

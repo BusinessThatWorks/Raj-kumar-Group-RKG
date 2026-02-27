@@ -863,8 +863,14 @@ frappe.ui.form.on('HIRISE Account Bills Item', {
 
 function create_simple_sidebar(frm) {
 
-    // Make form body flex
-    frm.page.main.css("display", "flex");
+    // Make layout flex
+    frm.page.main.css({
+        "display": "flex",
+        "align-items": "stretch"
+    });
+
+    // Remove if already exists
+    $("#custom-right-sidebar").remove();
 
     let sidebar = `
         <div id="custom-right-sidebar">
@@ -882,18 +888,18 @@ function create_simple_sidebar(frm) {
         style.innerHTML = `
             #custom-right-sidebar {
                 width: 260px;
-                background: #d9ecff;
-                border-left: 3px solid #4dabf7;
-                padding: 15px;
+                background: #ffffff;
+                color: #7c7c7c;
+                padding: 20px;
                 margin-left: 20px;
-                border-radius: 6px;
-                height: fit-content;
+                min-height: 100vh;
+                border-left: 1px solid #d1d8dd;   /* 👈 ONLY LEFT BORDER */
             }
 
             .sidebar-title {
                 font-weight: 600;
-                margin-bottom: 6px;
-                color: #0d6efd;
+                margin-bottom: 10px;
+                color: #3f3f3f;
             }
         `;
         document.head.appendChild(style);
