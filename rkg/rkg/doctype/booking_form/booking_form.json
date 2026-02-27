@@ -86,6 +86,7 @@
   "non_honda_accessories_tab",
   "table_kydz",
   "hirise_accessories_bills_tab",
+  "table_apcj",
   "other_tab",
   "extended_warrantyew",
   "ex_warranty_amount",
@@ -603,13 +604,18 @@
    "fieldname": "table_kydz",
    "fieldtype": "Table",
    "options": "Non Honda Accessories Item"
+  },
+  {
+   "fieldname": "table_apcj",
+   "fieldtype": "Table",
+   "options": "HIRISE Account Bills Item"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-27 11:00:53.116159",
+ "modified": "2026-02-27 14:06:46.354468",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

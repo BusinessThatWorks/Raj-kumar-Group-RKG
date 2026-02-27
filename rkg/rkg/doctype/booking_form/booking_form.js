@@ -655,6 +655,17 @@ function get_nha_total(frm) {
 
     return flt(total, 2);
 }
+
+function get_hirise_total(frm) {
+
+    let total = 0;
+
+    (frm.doc.table_apcj || []).forEach(function(row) {
+        total += flt(row.amount);
+    });
+
+    return flt(total, 2);
+}
 // ================= FINAL TOTAL =================
 
 function calculate_final_amount(frm) {
@@ -668,9 +679,8 @@ function calculate_final_amount(frm) {
         flt(frm.doc.ex_warranty_amount);
 
     base_total += flt(frm.doc.road_tax_amount);
-
-    // 🔥 ADD CHILD TABLE TOTAL HERE
     base_total += get_nha_total(frm);
+    base_total += get_hirise_total(frm);
 
     let hp = frm.doc.payment_type === "Finance"
         ? flt(frm.doc.hp_amount)
@@ -900,6 +910,22 @@ frappe.ui.form.on('Non Honda Accessories Item', {
     },
 
     table_kydz_remove: function(frm) {
+        calculate_final_amount(frm);
+    }
+
+});
+
+frappe.ui.form.on('HIRISE Account Bills Item', {
+
+    amount: function(frm) {
+        calculate_final_amount(frm);
+    },
+
+    table_apcj_add: function(frm) {
+        calculate_final_amount(frm);
+    },
+
+    table_apcj_remove: function(frm) {
         calculate_final_amount(frm);
     }
 
