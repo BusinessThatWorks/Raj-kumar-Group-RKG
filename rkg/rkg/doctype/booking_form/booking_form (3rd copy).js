@@ -1,14 +1,6 @@
 frappe.ui.form.on('Booking Form', {
 
     refresh: function (frm) {
-        
-
-        $("#custom-right-sidebar").remove();
-        if (frm.is_new()) {
-            create_simple_sidebar(frm);
-        }
-
-
         if (frm.doc.docstatus === 1 && frm.doc.discount_amount == 0 && !frm.doc.approver) {
             frm.set_df_property("discount_amount", "read_only", 1);
         }
@@ -859,43 +851,3 @@ frappe.ui.form.on('HIRISE Account Bills Item', {
     }
 
 });
-
-
-function create_simple_sidebar(frm) {
-
-    // Make form body flex
-    frm.page.main.css("display", "flex");
-
-    let sidebar = `
-        <div id="custom-right-sidebar">
-            <div class="sidebar-title">New Booking Panel</div>
-            <div>This is visible only in New Form.</div>
-        </div>
-    `;
-
-    frm.page.main.append(sidebar);
-
-    if (!document.getElementById("custom-sidebar-style")) {
-
-        let style = document.createElement("style");
-        style.id = "custom-sidebar-style";
-        style.innerHTML = `
-            #custom-right-sidebar {
-                width: 260px;
-                background: #d9ecff;
-                border-left: 3px solid #4dabf7;
-                padding: 15px;
-                margin-left: 20px;
-                border-radius: 6px;
-                height: fit-content;
-            }
-
-            .sidebar-title {
-                font-weight: 600;
-                margin-bottom: 6px;
-                color: #0d6efd;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
