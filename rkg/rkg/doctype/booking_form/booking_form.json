@@ -56,9 +56,10 @@
   "tab_2_tab",
   "road_hsn_code",
   "section_break_mpcx",
-  "reg_and_road_tax",
-  "column_break_qyrw",
+  "column_break_ciyn",
   "road_tax_amount",
+  "column_break_qyrw",
+  "registration_amount",
   "section_break_bfmx",
   "road_cgst_rate",
   "road_cgst_amount",
@@ -66,7 +67,6 @@
   "road_sgst_rate",
   "road_sgst_amount",
   "column_break_smmw",
-  "registration_amount",
   "road_total",
   "nd_insurance_tab",
   "nd_type",
@@ -232,7 +232,7 @@
   {
    "fieldname": "road_total",
    "fieldtype": "Currency",
-   "label": "Amount",
+   "label": "Total Reg Amount",
    "read_only": 1
   },
   {
@@ -539,10 +539,10 @@
   },
   {
    "fieldname": "other_bank_name",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "hidden": 1,
-   "label": "Other Bank Name",
-   "options": "Customer Provided Hypothecated Bank"
+   "label": "Customer Requested Bank Name",
+   "options": "Customer Req Hypothecated Bank"
   },
   {
    "allow_on_submit": 1,
@@ -556,8 +556,7 @@
    "fieldname": "discount_approved",
    "fieldtype": "Select",
    "label": "Discount Approved",
-   "options": "Approved\nReject\nPending",
-   "read_only": 1
+   "options": "Approved\nReject\nPending"
   },
   {
    "fieldname": "section_break_mnbb",
@@ -571,13 +570,7 @@
    "fieldname": "approver",
    "fieldtype": "Link",
    "label": "Approver",
-   "options": "User"
-  },
-  {
-   "fieldname": "reg_and_road_tax",
-   "fieldtype": "Currency",
-   "label": "Reg & Road Tax",
-   "read_only": 1
+   "options": "Discount Approval"
   },
   {
    "depends_on": "eval:doc.payment_type==\"Finance\"",
@@ -600,13 +593,17 @@
    "fieldname": "hirise_accessories_bills_tab",
    "fieldtype": "Tab Break",
    "label": "HIRISE Accessories Bills"
+  },
+  {
+   "fieldname": "column_break_ciyn",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-26 15:56:26.195433",
+ "modified": "2026-02-26 21:35:10.419284",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

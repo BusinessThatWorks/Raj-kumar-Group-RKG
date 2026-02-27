@@ -12,11 +12,13 @@ class BookingForm(Document):
         self.final_amount = flt(self.final_amount, 2)
         self.discount_amount = flt(self.discount_amount, 2)
 
+        # ✅ If discount entered → approver mandatory
         if self.discount_amount > 0:
 
             if not self.approver:
                 frappe.throw("Approver is mandatory when discount is entered.")
 
+            # ✅ Check approver exists in Discount Approval Master
             approval = frappe.db.exists(
                 "Discount Approval",
                 {"approval_user": self.approver}
@@ -25,13 +27,13 @@ class BookingForm(Document):
             if not approval:
                 frappe.throw("Selected approver is not valid discount approver.")
 
-            # ✅ SAME LOGIC AS JS
+            # ================= LIMIT VALIDATION =================
+
             base_total = (
                 (self.amount or 0) +
                 (self.road_total or 0) +
                 (self.nd_total or 0) +
-                (self.ex_warranty_amount or 0) +
-                (self.road_tax_amount or 0)
+                (self.ex_warranty_amount or 0)
             )
 
             if self.payment_type == "Finance":
@@ -48,8 +50,9 @@ class BookingForm(Document):
             if self.discount_amount > max_allowed:
                 frappe.throw(
                     f"Discount exceeds allowed limit ({allowed_percent}%). "
-                    f"Maximum allowed: ₹ {round(max_allowed, 2)}"
+                    f"Maximum allowed: {round(max_allowed, 2)}"
                 )
+
     # ================= SUBMIT =================
 
     def on_submit(self):
