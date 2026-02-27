@@ -184,7 +184,7 @@ frappe.ui.form.on('Booking Form', {
 
         frappe.prompt([
             {
-                label: "Customer Requested Bank Name",
+                label: "Customer Provided Bank Name",
                 fieldname: "bank_name",
                 fieldtype: "Data",
                 reqd: 1
