@@ -25,6 +25,9 @@ frappe.ui.form.on('Booking Form', {
 
         }, 50);
     },
+    final_amount: function(frm) {
+        show_final_amount_top(frm);
+    },
     approver: async function(frm) {
 
         // Reset first
@@ -641,11 +644,22 @@ function calculate_nd(frm) {
     calculate_final_amount(frm);
 }
 
+
+function get_nha_total(frm) {
+
+    let total = 0;
+
+    (frm.doc.table_kydz || []).forEach(function(row) {
+        total += flt(row.amount);
+    });
+
+    return flt(total, 2);
+}
 // ================= FINAL TOTAL =================
 
 function calculate_final_amount(frm) {
 
-    if (frm.doc.docstatus === 1) return;   // 🔥 IMPORTANT
+    if (frm.doc.docstatus === 1) return;
 
     let base_total =
         flt(frm.doc.amount) +
@@ -654,6 +668,9 @@ function calculate_final_amount(frm) {
         flt(frm.doc.ex_warranty_amount);
 
     base_total += flt(frm.doc.road_tax_amount);
+
+    // 🔥 ADD CHILD TABLE TOTAL HERE
+    base_total += get_nha_total(frm);
 
     let hp = frm.doc.payment_type === "Finance"
         ? flt(frm.doc.hp_amount)
@@ -838,3 +855,52 @@ function show_final_amount_top(frm) {
     });
 }
 
+
+
+frappe.ui.form.on('Non Honda Accessories Item', {
+
+    item: function(frm, cdt, cdn) {
+
+        let row = locals[cdt][cdn];
+
+        if (!row.item) {
+            frappe.model.set_value(cdt, cdn, "amount", 0);
+            calculate_final_amount(frm);
+            return;
+        }
+
+        frappe.call({
+            method: "frappe.client.get_list",
+            args: {
+                doctype: "Item Price",
+                filters: {
+                    item_code: row.item,
+                    price_list: "Standard Buying"
+                },
+                fields: ["price_list_rate"],
+                limit_page_length: 1
+            },
+            callback: function(r) {
+
+                let rate = 0;
+
+                if (r.message && r.message.length > 0) {
+                    rate = r.message[0].price_list_rate || 0;
+                }
+
+                frappe.model.set_value(cdt, cdn, "amount", rate);
+
+                calculate_final_amount(frm); // 🔥 update final
+            }
+        });
+    },
+
+    amount: function(frm) {
+        calculate_final_amount(frm);
+    },
+
+    table_kydz_remove: function(frm) {
+        calculate_final_amount(frm);
+    }
+
+});
