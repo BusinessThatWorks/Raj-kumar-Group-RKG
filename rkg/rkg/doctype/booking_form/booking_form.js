@@ -1,8 +1,6 @@
 frappe.ui.form.on('Booking Form', {
-    
-    refresh: function(frm) {
 
-        
+    refresh: function (frm) {
         if (frm.doc.docstatus === 1 && frm.doc.discount_amount == 0 && !frm.doc.approver) {
             frm.set_df_property("discount_amount", "read_only", 1);
         }
@@ -25,10 +23,10 @@ frappe.ui.form.on('Booking Form', {
 
         }, 50);
     },
-    final_amount: function(frm) {
+    final_amount: function (frm) {
         show_final_amount_top(frm);
     },
-    approver: async function(frm) {
+    approver: async function (frm) {
 
         // Reset first
         frm.allowed_discount_percent = 0;
@@ -50,14 +48,14 @@ frappe.ui.form.on('Booking Form', {
 
         validate_discount_limit(frm);
     },
-    after_save: function(frm) {
+    after_save: function (frm) {
 
-        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver =='') {
+        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver == '') {
             frappe.throw("Select approver first");
             return;
         }
-        
-        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver !='') {
+
+        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver != '') {
 
             frm.set_value("discount_approved", "Pending");
 
@@ -68,11 +66,10 @@ frappe.ui.form.on('Booking Form', {
 
             frm._discount_changed = false; // reset flag
         }
-        
+
     },
     // ================= DISCOUNT =================
-
-    discount_amount: function(frm) {
+    discount_amount: function (frm) {
 
         frm._discount_changed = true;
 
@@ -81,17 +78,13 @@ frappe.ui.form.on('Booking Form', {
         }
 
         validate_discount_limit(frm);
-
-        // Store safe rollback value
         frm._old_discount_amount = frm.doc.discount_amount || 0;
 
         if (frm.doc.docstatus === 0) {
             calculate_final_amount(frm);
         }
     },
-
-    validate: function(frm) {
-
+    validate: function (frm) {
         if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
             frappe.throw("Approver is mandatory when Discount Amount is entered.");
         }
@@ -102,28 +95,23 @@ frappe.ui.form.on('Booking Form', {
     },
     // ================= CUSTOMER FETCH =================
 
-   customer: function(frm) {
-
+    customer: function (frm) {
         if (!frm.doc.customer) {
             frm.set_value("address", "");
             return;
         }
-
-        // Step 1: Get default address name
         frappe.call({
             method: "frappe.contacts.doctype.address.address.get_default_address",
             args: {
                 doctype: "Customer",
                 name: frm.doc.customer
             },
-            callback: function(r) {
+            callback: function (r) {
 
                 if (!r.message) {
                     frm.set_value("address", "");
                     return;
                 }
-
-                // Step 2: Fetch full address document
                 frappe.db.get_doc("Address", r.message)
                     .then(address => {
 
@@ -135,23 +123,18 @@ frappe.ui.form.on('Booking Form', {
                         frm.set_value("pin", address.pincode || "");
                         frm.set_value("district", address.city || "");
                     });
-                
+
             }
         });
 
     },
-
     // ================= ITEM FETCH =================
-
-    item: function(frm) {
+    item: function (frm) {
 
         if (!frm.doc.item) return;
-
         frappe.db.get_doc("Model Price List", frm.doc.item)
             .then(doc => {
-
                 frm._model_price_doc = doc;
-
                 safe_set(frm, "price", doc.ex_showroom);
                 safe_set(frm, "road_tax_amount", doc.road_tax_amount);
                 safe_set(frm, "registration_amount", doc.registration);
@@ -160,15 +143,11 @@ frappe.ui.form.on('Booking Form', {
 
                 if (!frm.doc.nd_type)
                     frm.set_value("nd_type", "Normal");
-
                 set_nd_price(frm);
-
                 if (doc.item_group) {
                     frappe.db.get_doc("Item Group", doc.item_group)
                         .then(ig => {
-
                             let hsn = ig.gst_hsn_code || "";
-
                             safe_set(frm, "hsn_code", hsn);
                             safe_set(frm, "road_hsn_code", hsn);
                             safe_set(frm, "nd_hsn_code", hsn);
@@ -180,17 +159,12 @@ frappe.ui.form.on('Booking Form', {
     },
 
     // ================= OTHER LOGIC =================
-
-    nd_type: function(frm) {
+    nd_type: function (frm) {
         set_nd_price(frm);
         calculate_nd(frm);
     },
-    hypothecated_bank: function(frm) {
-
-        // Only for Finance
+    hypothecated_bank: function (frm) {
         if (frm.doc.payment_type !== "Finance") return;
-
-        // 🔴 If NOT Others → Reset & Hide
         if (frm.doc.hypothecated_bank !== "Others") {
 
             frm.set_value("other_bank_name", "");
@@ -200,8 +174,6 @@ frappe.ui.form.on('Booking Form', {
 
             return;
         }
-
-        // 🟢 If Others → Show Popup
         let d = new frappe.ui.Dialog({
             title: "Create Customer Requested Bank",
             fields: [
@@ -217,14 +189,14 @@ frappe.ui.form.on('Booking Form', {
 
                 frappe.call({
                     method: "frappe.client.insert",
-                    args:{
-                        doc:{
-                            doctype:"Customer Req Hypothecated Bank",
+                    args: {
+                        doc: {
+                            doctype: "Customer Req Hypothecated Bank",
                             booking_form: frm.doc.name,
                             bank_name: values.bank_name
                         }
                     },
-                    callback:function(){
+                    callback: function () {
 
                         frm.set_value("other_bank_name", values.bank_name);
                         frm.set_df_property("other_bank_name", "hidden", 0);
@@ -237,9 +209,7 @@ frappe.ui.form.on('Booking Form', {
                 });
             }
         });
-
-        // 🔥 If popup closed without submit
-        d.onhide = function() {
+        d.onhide = function () {
             if (!d._submitted) {
                 frm.set_value("hypothecated_bank", "");
             }
@@ -248,44 +218,44 @@ frappe.ui.form.on('Booking Form', {
         d.show();
     },
 
-    payment_type: function(frm) {
+    payment_type: function (frm) {
         manage_payment_logic(frm);
         toggle_other_bank(frm);
     },
 
-    down_payment_amount: function(frm) {
+    down_payment_amount: function (frm) {
         if (frm.doc.payment_type === "Finance") {
             calculate_finance_from_down(frm);
         }
     },
 
-    registration_amount: function(frm) {
+    registration_amount: function (frm) {
         calculate_road(frm);
     },
 
-    road_tax_amount: function(frm) {
+    road_tax_amount: function (frm) {
         calculate_road_tax(frm);
     },
 
-    hp_amount: function(frm) {
+    hp_amount: function (frm) {
         if (frm.doc.payment_type === "Finance") {
             calculate_final_amount(frm);
             calculate_finance_from_down(frm);
         }
     },
 
-    finance_amount: function(frm) {
+    finance_amount: function (frm) {
         if (frm.doc.payment_type === "Finance") {
             calculate_down_from_finance(frm);
         }
     },
 
-    ex_warranty_amount: function(frm) {
+    ex_warranty_amount: function (frm) {
         calculate_final_amount(frm);
     },
 
-    extended_warrantyew: function(frm){
-        if(frm.doc.extended_warrantyew == 'Not Applicable') {
+    extended_warrantyew: function (frm) {
+        if (frm.doc.extended_warrantyew == 'Not Applicable') {
             safe_set(frm, "ex_warranty_amount", "");
         } else {
             safe_set(frm, "ex_warranty_amount", frm.doc.saved_amount);
@@ -306,23 +276,18 @@ frappe.ui.form.on('Booking Form', {
 
 
 async function control_discount_fields(frm) {
-    
-    if(frm.doc.discount_approved == 'Approved' || frm.doc.discount_approved == 'Reject')
-    {
+
+    if (frm.doc.discount_approved == 'Approved' || frm.doc.discount_approved == 'Reject') {
         frm.set_df_property("discount_amount", "read_only", 1);
     }
 
     frm.allowed_discount_percent = 0;
     frm.is_discount_approver = false;
-
-    // Always visible
     ["discount_amount", "discount_approved", "approver"].forEach(f => {
         frm.set_df_property(f, "hidden", 0);
     });
 
     frm.set_df_property("discount_approved", "read_only", 1);
-
-    // Check approver master
     let approval = await frappe.db.get_list("Discount Approval", {
         filters: {
             approval_user: frappe.session.user
@@ -427,8 +392,6 @@ function add_generate_decision_button(frm) {
                 });
             }
         });
-
-        // 🔥 Set dialog HTML content
         d.fields_dict.info_html.$wrapper.html(`
             <div style="margin-bottom:10px; padding:10px; 
                         background:#f8f9fa; border-radius:8px;
@@ -445,25 +408,19 @@ function add_generate_decision_button(frm) {
     }).addClass("btn-primary");
 }
 
-
 async function validate_discount_limit(frm) {
 
     if (!frm.doc.discount_amount) return;
     if (!frm.doc.approver) return;
     if (frm.doc.discount_approved === "Approved") return;
-
-    // 🔹 Always fetch fresh limit from DB
     let res = await frappe.db.get_value(
         "Discount Approval",
         { approval_user: frm.doc.approver },
         "discount_percent"
     );
-
     let allowed_percent = res?.message?.discount_percent || 0;
 
     if (!allowed_percent) return;
-
-    // 🔹 Calculate base total
     let base_total =
         flt(frm.doc.amount) +
         flt(frm.doc.road_total) +
@@ -476,8 +433,6 @@ async function validate_discount_limit(frm) {
     }
 
     let max_allowed = (base_total * allowed_percent) / 100;
-
-    // 🔹 Validate
     if (flt(frm.doc.discount_amount) > max_allowed) {
 
         frappe.msgprint({
@@ -488,9 +443,6 @@ async function validate_discount_limit(frm) {
             `,
             indicator: "red"
         });
-
-        // Optional: auto clear invalid discount
-        // frm.set_value("discount_amount", 0);
     }
 }
 
@@ -511,7 +463,6 @@ async function load_approver_limit(frm) {
     }
 }
 
-
 function field_exists(frm, fieldname) {
     return frm.meta.fields.some(f => f.fieldname === fieldname);
 }
@@ -521,8 +472,6 @@ function safe_set(frm, fieldname, value) {
         frm.set_value(fieldname, value || 0);
     }
 }
-
-
 function toggle_other_bank(frm) {
 
     if (frm.doc.payment_type === "Finance" &&
@@ -566,8 +515,6 @@ function set_default_gst_rates(frm) {
     });
 }
 
-
-
 function set_nd_price(frm) {
 
     let doc = frm._model_price_doc;
@@ -599,20 +546,15 @@ function calculate_tab_one(frm) {
 
     calculate_final_amount(frm);
 }
-
-
 // ================= ROAD =================
 
 function calculate_road(frm) {
 
-    if (frm.doc.docstatus === 1) return;   // 🔥 ADD THIS
-
+    if (frm.doc.docstatus === 1) return;
     let base = frm.doc.registration_amount || 0;
-
     let cgst = (base * (frm.doc.road_cgst_rate || 0)) / 100;
     let sgst = (base * (frm.doc.road_sgst_rate || 0)) / 100;
-
-    let total = flt(base + cgst + sgst, 2);   // 🔥 ROUND HERE
+    let total = flt(base + cgst + sgst, 2);
 
     safe_set(frm, "road_cgst_amount", flt(cgst, 2));
     safe_set(frm, "road_sgst_amount", flt(sgst, 2));
@@ -622,15 +564,10 @@ function calculate_road(frm) {
 function calculate_road_tax(frm) {
 
     let road_tax = frm.doc.road_tax_amount || 0;
-
-    // Road tax is direct addition (no GST split)
     frm._road_tax_value = road_tax;
-
     calculate_final_amount(frm);
 }
-
 // ================= ND =================
-
 function calculate_nd(frm) {
 
     let base = frm.doc.nd_price || 0;
@@ -644,30 +581,24 @@ function calculate_nd(frm) {
     calculate_final_amount(frm);
 }
 
-
 function get_nha_total(frm) {
 
     let total = 0;
-
-    (frm.doc.table_kydz || []).forEach(function(row) {
+    (frm.doc.table_kydz || []).forEach(function (row) {
         total += flt(row.amount);
     });
-
     return flt(total, 2);
 }
 
 function get_hirise_total(frm) {
-
     let total = 0;
-
-    (frm.doc.table_apcj || []).forEach(function(row) {
+    (frm.doc.table_apcj || []).forEach(function (row) {
         total += flt(row.amount);
     });
 
     return flt(total, 2);
 }
 // ================= FINAL TOTAL =================
-
 function calculate_final_amount(frm) {
 
     if (frm.doc.docstatus === 1) return;
@@ -687,9 +618,7 @@ function calculate_final_amount(frm) {
         : 0;
 
     let final_total = flt(base_total + hp, 2);
-
     final_total -= flt(frm.doc.discount_amount);
-
     frm.set_value("final_amount", flt(final_total, 2));
 }
 // ================= PAYMENT LOGIC =================
@@ -727,10 +656,7 @@ function manage_payment_logic(frm) {
         }
     }
 }
-
-
 // ================= FINANCE FROM DOWN / HP =================
-
 function calculate_finance_from_down(frm) {
 
     if (frm.doc.docstatus === 1) return;
@@ -744,7 +670,6 @@ function calculate_finance_from_down(frm) {
 
     frm.set_value("finance_amount", finance);
 }
-
 // ================= DOWN FROM FINANCE =================
 
 function calculate_down_from_finance(frm) {
@@ -760,8 +685,6 @@ function calculate_down_from_finance(frm) {
 
     frm.set_value("down_payment_amount", down);
 }
-
-
 // ================= TOP DISPLAY =================
 
 function show_final_amount_top(frm) {
@@ -865,11 +788,9 @@ function show_final_amount_top(frm) {
     });
 }
 
-
-
 frappe.ui.form.on('Non Honda Accessories Item', {
 
-    item: function(frm, cdt, cdn) {
+    item: function (frm, cdt, cdn) {
 
         let row = locals[cdt][cdn];
 
@@ -890,7 +811,7 @@ frappe.ui.form.on('Non Honda Accessories Item', {
                 fields: ["price_list_rate"],
                 limit_page_length: 1
             },
-            callback: function(r) {
+            callback: function (r) {
 
                 let rate = 0;
 
@@ -905,11 +826,11 @@ frappe.ui.form.on('Non Honda Accessories Item', {
         });
     },
 
-    amount: function(frm) {
+    amount: function (frm) {
         calculate_final_amount(frm);
     },
 
-    table_kydz_remove: function(frm) {
+    table_kydz_remove: function (frm) {
         calculate_final_amount(frm);
     }
 
@@ -917,15 +838,15 @@ frappe.ui.form.on('Non Honda Accessories Item', {
 
 frappe.ui.form.on('HIRISE Account Bills Item', {
 
-    amount: function(frm) {
+    amount: function (frm) {
         calculate_final_amount(frm);
     },
 
-    table_apcj_add: function(frm) {
+    table_apcj_add: function (frm) {
         calculate_final_amount(frm);
     },
 
-    table_apcj_remove: function(frm) {
+    table_apcj_remove: function (frm) {
         calculate_final_amount(frm);
     }
 

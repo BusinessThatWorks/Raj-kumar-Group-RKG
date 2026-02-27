@@ -12,6 +12,7 @@ frappe.ui.form.on('Model Price List', {
 
     ex_showroom: calculate_all,
     registration: calculate_all,
+    road_tax_amount:calculate_all,
     insurance: calculate_all,
     extended_warranty: calculate_all,
     nd_accessories: calculate_all
@@ -27,6 +28,7 @@ function calculate_all(frm) {
 
     let ex  = frm.doc.ex_showroom || 0;
     let reg = frm.doc.registration || 0;
+    let rd = frm.doc.road_tax_amount || 0;
     let ins = frm.doc.insurance || 0;
     let ew  = frm.doc.extended_warranty || 0;
     let nd  = frm.doc.nd_accessories || 0;
@@ -34,19 +36,19 @@ function calculate_all(frm) {
     // ✅ 1 + 2 + 3 (ALL must be present)
     let basic = 0;
     if (ex && reg && ins) {
-        basic = ex + reg + ins;
+        basic = ex + reg + rd + ins;
     }
 
     // ✅ 1 + 2 + 3 + 4 (ALL must be present)
     let with_ew = 0;
     if (ex && reg && ins && ew) {
-        with_ew = ex + reg + ins + ew;
+        with_ew = ex + reg + rd + ins + ew;
     }
 
     // ✅ 1 + 2 + 4 + 5 (ALL must be present)
     let with_nd = 0;
     if (ex && reg && ew && nd) {
-        with_nd = ex + reg + ew + nd;
+        with_nd = ex + reg + rd + ew + nd;
     }
 
     frm.set_value("on_road_basic", basic);
