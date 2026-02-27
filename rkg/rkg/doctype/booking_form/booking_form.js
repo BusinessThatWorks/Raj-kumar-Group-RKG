@@ -2,6 +2,10 @@ frappe.ui.form.on('Booking Form', {
     
     refresh: function(frm) {
 
+        
+        if (frm.doc.docstatus === 1 && frm.doc.discount_amount == 0 && !frm.doc.approver) {
+            frm.set_df_property("discount_amount", "read_only", 1);
+        }
         setTimeout(async () => {
 
             if (frm.doc.docstatus === 0) {
@@ -41,12 +45,16 @@ frappe.ui.form.on('Booking Form', {
             frm.allowed_discount_percent = limit.message.discount_percent || 0;
         }
 
-        // Re-check discount after changing approver
         validate_discount_limit(frm);
     },
     after_save: function(frm) {
 
-        if (frm.doc.docstatus === 1 && frm._discount_changed) {
+        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver =='') {
+            frappe.throw("Select approver first");
+            return;
+        }
+        
+        if (frm.doc.docstatus === 1 && frm._discount_changed && frm._approver !='') {
 
             frm.set_value("discount_approved", "Pending");
 
@@ -57,6 +65,7 @@ frappe.ui.form.on('Booking Form', {
 
             frm._discount_changed = false; // reset flag
         }
+        
     },
     // ================= DISCOUNT =================
 
@@ -173,49 +182,67 @@ frappe.ui.form.on('Booking Form', {
         set_nd_price(frm);
         calculate_nd(frm);
     },
+    hypothecated_bank: function(frm) {
 
-     hypothecated_bank: function(frm) {
-
+        // Only for Finance
         if (frm.doc.payment_type !== "Finance") return;
 
-        if (frm.doc.hypothecated_bank !== "Others") return;
+        // 🔴 If NOT Others → Reset & Hide
+        if (frm.doc.hypothecated_bank !== "Others") {
 
-        if (frm.doc.other_bank_name) return; // ⚠️ Prevent repeat popup
+            frm.set_value("other_bank_name", "");
+            frm.set_df_property("other_bank_name", "hidden", 1);
+            frm.set_df_property("other_bank_name", "reqd", 0);
+            frm.refresh_field("other_bank_name");
 
-        frappe.prompt([
-            {
-                label: "Customer Provided Bank Name",
-                fieldname: "bank_name",
-                fieldtype: "Data",
-                reqd: 1
-            }
-        ],
-        function(values){
+            return;
+        }
 
-            frappe.call({
-                method: "frappe.client.insert",
-                args:{
-                    doc:{
-                        doctype:"Customer Req Hypothecated Bank",
-                        booking_form: frm.doc.name,
-                        bank_name: values.bank_name
-                    }
-                },
-                callback:function(){
-                    frm.set_value("other_bank_name", values.bank_name);
-
-                    frm.set_df_property("other_bank_name", "hidden", 0);
-                    frm.set_df_property("other_bank_name", "reqd", 1);
-
-                    frm.refresh_field("other_bank_name");
-
-                    // 🔥 Important — sync with your main visibility logic
-                    toggle_other_bank(frm);
+        // 🟢 If Others → Show Popup
+        let d = new frappe.ui.Dialog({
+            title: "Create Customer Requested Bank",
+            fields: [
+                {
+                    label: "Customer Provided Bank Name",
+                    fieldname: "bank_name",
+                    fieldtype: "Data",
+                    reqd: 1
                 }
-            });
+            ],
+            primary_action_label: "Submit",
+            primary_action(values) {
 
-        },
-        "Create Customer Requested Bank");
+                frappe.call({
+                    method: "frappe.client.insert",
+                    args:{
+                        doc:{
+                            doctype:"Customer Req Hypothecated Bank",
+                            booking_form: frm.doc.name,
+                            bank_name: values.bank_name
+                        }
+                    },
+                    callback:function(){
+
+                        frm.set_value("other_bank_name", values.bank_name);
+                        frm.set_df_property("other_bank_name", "hidden", 0);
+                        frm.set_df_property("other_bank_name", "reqd", 1);
+                        frm.refresh_field("other_bank_name");
+
+                        d._submitted = true;
+                        d.hide();
+                    }
+                });
+            }
+        });
+
+        // 🔥 If popup closed without submit
+        d.onhide = function() {
+            if (!d._submitted) {
+                frm.set_value("hypothecated_bank", "");
+            }
+        };
+
+        d.show();
     },
 
     payment_type: function(frm) {
@@ -575,20 +602,18 @@ function calculate_tab_one(frm) {
 
 function calculate_road(frm) {
 
+    if (frm.doc.docstatus === 1) return;   // 🔥 ADD THIS
+
     let base = frm.doc.registration_amount || 0;
 
-    let cgst_rate = frm.doc.road_cgst_rate || 0;
-    let sgst_rate = frm.doc.road_sgst_rate || 0;
+    let cgst = (base * (frm.doc.road_cgst_rate || 0)) / 100;
+    let sgst = (base * (frm.doc.road_sgst_rate || 0)) / 100;
 
-    let cgst = (base * cgst_rate) / 100;
-    let sgst = (base * sgst_rate) / 100;
+    let total = flt(base + cgst + sgst, 2);   // 🔥 ROUND HERE
 
-    safe_set(frm, "road_cgst_amount", cgst);
-    safe_set(frm, "road_sgst_amount", sgst);
-
-    safe_set(frm, "road_total", base + cgst + sgst);
-
-    calculate_final_amount(frm);
+    safe_set(frm, "road_cgst_amount", flt(cgst, 2));
+    safe_set(frm, "road_sgst_amount", flt(sgst, 2));
+    safe_set(frm, "road_total", total);
 }
 
 function calculate_road_tax(frm) {
@@ -616,10 +641,11 @@ function calculate_nd(frm) {
     calculate_final_amount(frm);
 }
 
-
 // ================= FINAL TOTAL =================
 
 function calculate_final_amount(frm) {
+
+    if (frm.doc.docstatus === 1) return;   // 🔥 IMPORTANT
 
     let base_total =
         flt(frm.doc.amount) +
@@ -627,22 +653,17 @@ function calculate_final_amount(frm) {
         flt(frm.doc.nd_total) +
         flt(frm.doc.ex_warranty_amount);
 
-    // ✅ Add road tax directly
     base_total += flt(frm.doc.road_tax_amount);
 
     let hp = frm.doc.payment_type === "Finance"
         ? flt(frm.doc.hp_amount)
         : 0;
 
-    let final_total = base_total + hp;
+    let final_total = flt(base_total + hp, 2);
 
-    if (frm.doc.docstatus === 0) {
-        final_total -= flt(frm.doc.discount_amount);
-    }
+    final_total -= flt(frm.doc.discount_amount);
 
     frm.set_value("final_amount", flt(final_total, 2));
-
-    show_final_amount_top(frm);
 }
 // ================= PAYMENT LOGIC =================
 function manage_payment_logic(frm) {
