@@ -15,6 +15,7 @@
   "ex_showroom",
   "column_break_wckd",
   "registration",
+  "column_break_jnxe",
   "road_tax_amount",
   "column_break_fnvv",
   "insurance",
@@ -167,14 +168,18 @@
   },
   {
    "fieldname": "road_tax_amount",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Road Tax"
+  },
+  {
+   "fieldname": "column_break_jnxe",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-27 10:30:20.801824",
+ "modified": "2026-02-27 20:26:24.342074",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Model Price List",

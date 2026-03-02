@@ -1,38 +1,33 @@
 frappe.ui.form.on('Booking Form', {
 
     refresh: function (frm) {
-        
+
+
+        frm._booking_summary_added = false;
+
+        if (frm.is_new()) {
+            create_simple_sidebar(frm);   // this already renders
+            return;
+        }
 
         $("#custom-right-sidebar").remove();
-        if (frm.is_new()) {
-            create_simple_sidebar(frm);
+
+        if (frm.doc.docstatus === 0 || frm.doc.docstatus === 1) {
+            append_to_default_sidebar(frm);  // this already renders
         }
 
 
-        if (frm.doc.docstatus === 1 && frm.doc.discount_amount == 0 && !frm.doc.approver) {
-            frm.set_df_property("discount_amount", "read_only", 1);
+        // if (frm.doc.docstatus === 0) {
+        //     calculate_final_amount(frm);
+        // }
+
+        manage_payment_logic(frm);
+        toggle_other_bank(frm);
+        control_discount_fields(frm);
+
+        if (frm.doc.docstatus === 1) {
+            add_generate_decision_button(frm);
         }
-        setTimeout(async () => {
-
-            if (frm.doc.docstatus === 0) {
-                calculate_final_amount(frm);
-            }
-
-            manage_payment_logic(frm);
-            toggle_other_bank(frm);
-
-            show_final_amount_top(frm);
-
-            await control_discount_fields(frm);
-
-            if (frm.doc.docstatus === 1) {
-                add_generate_decision_button(frm);
-            }
-
-        }, 50);
-    },
-    final_amount: function (frm) {
-        show_final_amount_top(frm);
     },
     approver: async function (frm) {
 
@@ -86,11 +81,11 @@ frappe.ui.form.on('Booking Form', {
         }
 
         validate_discount_limit(frm);
-        frm._old_discount_amount = frm.doc.discount_amount || 0;
 
-        if (frm.doc.docstatus === 0) {
-            calculate_final_amount(frm);
-        }
+        // if (frm.doc.docstatus === 0) {
+        //     calculate_final_amount(frm);
+        // }
+        calculate_final_amount(frm);
     },
     validate: function (frm) {
         if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
@@ -234,6 +229,7 @@ frappe.ui.form.on('Booking Form', {
     down_payment_amount: function (frm) {
         if (frm.doc.payment_type === "Finance") {
             calculate_finance_from_down(frm);
+            render_booking_summary(frm);
         }
     },
 
@@ -255,6 +251,7 @@ frappe.ui.form.on('Booking Form', {
     finance_amount: function (frm) {
         if (frm.doc.payment_type === "Finance") {
             calculate_down_from_finance(frm);
+            render_booking_summary(frm);
         }
     },
 
@@ -421,14 +418,17 @@ async function validate_discount_limit(frm) {
     if (!frm.doc.discount_amount) return;
     if (!frm.doc.approver) return;
     if (frm.doc.discount_approved === "Approved") return;
+
     let res = await frappe.db.get_value(
         "Discount Approval",
         { approval_user: frm.doc.approver },
         "discount_percent"
     );
+
     let allowed_percent = res?.message?.discount_percent || 0;
 
     if (!allowed_percent) return;
+
     let base_total =
         flt(frm.doc.amount) +
         flt(frm.doc.road_total) +
@@ -440,17 +440,31 @@ async function validate_discount_limit(frm) {
         base_total += flt(frm.doc.hp_amount);
     }
 
-    let max_allowed = (base_total * allowed_percent) / 100;
-    if (flt(frm.doc.discount_amount) > max_allowed) {
+    base_total += get_nha_total(frm);
+    base_total += get_hirise_total(frm);
+
+    base_total = flt(base_total, 2);
+
+    let max_allowed = flt((base_total * allowed_percent) / 100, 2);
+
+    let discount = flt(frm.doc.discount_amount);
+
+    // ✅ AUTO CORRECT (VERY IMPORTANT)
+    if (discount > max_allowed) {
+
+        frm.set_value("discount_amount", max_allowed);
 
         frappe.msgprint({
             title: "Discount Limit Exceeded",
             message: `
                 Approver Limit: ${allowed_percent}%<br>
-                Maximum Allowed: ₹ ${max_allowed.toFixed(2)}
+                Maximum Allowed: ₹ ${max_allowed.toFixed(2)}<br>
+                Discount automatically adjusted.
             `,
             indicator: "red"
         });
+
+        return;
     }
 }
 
@@ -476,23 +490,63 @@ function field_exists(frm, fieldname) {
 }
 
 function safe_set(frm, fieldname, value) {
-    if (field_exists(frm, fieldname)) {
-        frm.set_value(fieldname, value || 0);
+    if (!field_exists(frm, fieldname)) return;
+
+    let new_val = flt(value || 0, 2);
+    let current_val = flt(frm.doc[fieldname] || 0, 2);
+
+    if (current_val !== new_val) {
+        frm.set_value(fieldname, new_val);
     }
 }
+// function toggle_other_bank(frm) {
+
+//     if (frm.doc.payment_type === "Finance" &&
+//         frm.doc.hypothecated_bank === "Others") {
+
+//         frm.set_df_property("other_bank_name", "hidden", 0);
+
+//     } else {
+
+//         frm.set_df_property("other_bank_name", "hidden", 1);
+//         frm.set_df_property("other_bank_name", "reqd", 0);
+//         frm.set_value("other_bank_name", "");
+//     }
+// }
+
 function toggle_other_bank(frm) {
 
-    if (frm.doc.payment_type === "Finance" &&
-        frm.doc.hypothecated_bank === "Others") {
+    if (frm.doc.payment_type === "Finance") {
 
-        frm.set_df_property("other_bank_name", "hidden", 0);
+        // Make Hypothecated Bank mandatory
+        frm.set_df_property("hypothecated_bank", "reqd", 1);
+
+        if (frm.doc.hypothecated_bank === "Others") {
+
+            frm.set_df_property("other_bank_name", "hidden", 0);
+            frm.set_df_property("other_bank_name", "reqd", 1);
+
+        } else {
+
+            frm.set_df_property("other_bank_name", "hidden", 1);
+            frm.set_df_property("other_bank_name", "reqd", 0);
+            frm.set_value("other_bank_name", "");
+        }
 
     } else {
 
+        frm.set_df_property("hypothecated_bank", "reqd", 0);
         frm.set_df_property("other_bank_name", "hidden", 1);
         frm.set_df_property("other_bank_name", "reqd", 0);
+
+        frm.set_value("hypothecated_bank", "");
         frm.set_value("other_bank_name", "");
     }
+
+    frm.refresh_fields([
+        "hypothecated_bank",
+        "other_bank_name"
+    ]);
 }
 
 // ================= GST FETCH =================
@@ -530,12 +584,12 @@ function set_nd_price(frm) {
 
     if (frm.doc.nd_type === "Normal") {
         safe_set(frm, "nd_price", doc.insurance);
-        safe_set(frm, "provider", doc.general_insurance_provider);
+        frm.set_value("provider", doc.general_insurance_provider);
     }
 
     else if (frm.doc.nd_type === "ND") {
         safe_set(frm, "nd_price", doc.nd_accessories);
-        safe_set(frm, "provider", doc.nd_insurance_provider);
+        frm.set_value("provider", doc.nd_insurance_provider);
     }
 }
 
@@ -544,6 +598,7 @@ function set_nd_price(frm) {
 
 function calculate_tab_one(frm) {
 
+    if (frm.doc.docstatus === 1) return;  // ✅ ADD THIS
     let base = frm.doc.price || 0;
     let cgst = (base * (frm.doc.cgst_rate || 0)) / 100;
     let sgst = (base * (frm.doc.sgst_rate || 0)) / 100;
@@ -559,6 +614,7 @@ function calculate_tab_one(frm) {
 function calculate_road(frm) {
 
     if (frm.doc.docstatus === 1) return;
+
     let base = frm.doc.registration_amount || 0;
     let cgst = (base * (frm.doc.road_cgst_rate || 0)) / 100;
     let sgst = (base * (frm.doc.road_sgst_rate || 0)) / 100;
@@ -567,16 +623,17 @@ function calculate_road(frm) {
     safe_set(frm, "road_cgst_amount", flt(cgst, 2));
     safe_set(frm, "road_sgst_amount", flt(sgst, 2));
     safe_set(frm, "road_total", total);
+    calculate_final_amount(frm);
 }
 
 function calculate_road_tax(frm) {
 
     let road_tax = frm.doc.road_tax_amount || 0;
-    frm._road_tax_value = road_tax;
     calculate_final_amount(frm);
 }
 // ================= ND =================
 function calculate_nd(frm) {
+    if (frm.doc.docstatus === 1) return;
 
     let base = frm.doc.nd_price || 0;
     let cgst = (base * (frm.doc.nd_cgst_rate || 0)) / 100;
@@ -607,61 +664,207 @@ function get_hirise_total(frm) {
     return flt(total, 2);
 }
 // ================= FINAL TOTAL =================
+// function calculate_final_amount(frm) {
+
+//     if (frm.doc.docstatus === 1) return;
+
+//     let base_total =
+//         flt(frm.doc.amount) +
+//         flt(frm.doc.road_total) +
+//         flt(frm.doc.nd_total) +
+//         flt(frm.doc.ex_warranty_amount) +
+//         flt(frm.doc.road_tax_amount) +
+//         get_nha_total(frm) +
+//         get_hirise_total(frm);
+
+//     if (frm.doc.payment_type === "Finance") {
+//         base_total += flt(frm.doc.hp_amount);
+//     }
+
+//     base_total = flt(base_total, 2);
+
+//     let discount = flt(frm.doc.discount_amount);
+
+//     if (discount > base_total) {
+//         discount = base_total;
+//     }
+
+//     let final_total = flt(base_total - discount, 2);
+
+//     if (final_total < 0) {
+//         final_total = 0;
+//     }
+
+//     if (flt(frm.doc.final_amount) !== final_total) {
+//         frm.set_value("final_amount", final_total);
+//     }
+//     if (frm.doc.payment_type === "Finance") {
+
+//         let final = flt(frm.doc.final_amount);
+//         let down = flt(frm.doc.down_payment_amount);
+//         let hp = flt(frm.doc.hp_amount);
+
+//         let finance = final - down - hp;
+
+//         if (finance < 0) finance = 0;
+
+//         frm.set_value("finance_amount", finance);
+//     }
+//     render_booking_summary(frm);
+// }
 function calculate_final_amount(frm) {
 
     if (frm.doc.docstatus === 1) return;
 
+    // ================= BASE TOTAL =================
     let base_total =
         flt(frm.doc.amount) +
         flt(frm.doc.road_total) +
         flt(frm.doc.nd_total) +
-        flt(frm.doc.ex_warranty_amount);
+        flt(frm.doc.ex_warranty_amount) +
+        flt(frm.doc.road_tax_amount) +
+        get_nha_total(frm) +
+        get_hirise_total(frm);
 
-    base_total += flt(frm.doc.road_tax_amount);
-    base_total += get_nha_total(frm);
-    base_total += get_hirise_total(frm);
-
-    let hp = frm.doc.payment_type === "Finance"
-        ? flt(frm.doc.hp_amount)
-        : 0;
-
-    let final_total = flt(base_total + hp, 2);
-    final_total -= flt(frm.doc.discount_amount);
-    frm.set_value("final_amount", flt(final_total, 2));
-}
-// ================= PAYMENT LOGIC =================
-function manage_payment_logic(frm) {
-
-    if (frm.doc.docstatus === 1) return; // ✅ Freeze all payment recalculation after submit
-
-    let fnamount = frm.doc.final_amount || 0;
-
-    if (frm.doc.payment_type === "Cash") {
-
-        frm.set_df_property("down_payment_amount", "reqd", 0);
-        frm.set_df_property("finance_amount", "reqd", 0);
-        frm.set_df_property("hp_amount", "reqd", 0);
-        frm.set_df_property("hypothecated_bank", "reqd", 0);
-
-        frm.set_value("hypothecated_bank", "");
-        frm.set_value("other_bank_name", "");
-
-        frm.set_value("hp_amount", 0);
-        frm.set_value("finance_amount", 0);
-
-        frm.set_value("down_payment_amount", fnamount);
+    // Add HP only for finance type
+    if (frm.doc.payment_type === "Finance") {
+        base_total += flt(frm.doc.hp_amount);
     }
 
+    base_total = flt(base_total, 2);
+
+    // ================= DISCOUNT LOGIC =================
+    let discount = flt(frm.doc.discount_amount);
+
+    // Prevent discount > subtotal
+    if (discount > base_total) {
+        discount = base_total;
+    }
+
+    let final_total = base_total;
+
+    // 🔥 Deduct discount ONLY if approved
+    if (discount > 0 && frm.doc.discount_approved === "Approved") {
+        final_total = base_total - discount;
+    }
+
+    final_total = flt(final_total, 2);
+
+    if (final_total < 0) {
+        final_total = 0;
+    }
+
+    // ================= SET FINAL =================
+    if (flt(frm.doc.final_amount) !== final_total) {
+        frm.set_value("final_amount", final_total);
+    }
+
+    // ================= FINANCE AUTO SYNC =================
+    if (frm.doc.payment_type === "Finance") {
+
+        let final = flt(final_total);
+        let down = flt(frm.doc.down_payment_amount);
+        let hp = flt(frm.doc.hp_amount);
+
+        let finance = final - down - hp;
+
+        if (finance < 0) finance = 0;
+
+        finance = flt(finance, 2);
+
+        if (flt(frm.doc.finance_amount) !== finance) {
+            frm.set_value("finance_amount", finance);
+        }
+    }
+
+    // ================= SIDEBAR =================
+    render_booking_summary(frm);
+}
+// ================= PAYMENT LOGIC =================
+
+// function manage_payment_logic(frm) {
+
+//     if (frm.doc.docstatus === 1) return;
+
+//     // 🔥 Always recalculate final first
+//     // calculate_final_amount(frm);
+
+//     let final_amount = flt(frm.doc.final_amount);
+
+//     // ================= CASH =================
+//     if (frm.doc.payment_type === "Cash") {
+
+//         safe_set(frm, "hp_amount", 0);
+//         safe_set(frm, "finance_amount", 0);
+
+//         // Down = Final
+//         safe_set(frm, "down_payment_amount", final_amount);
+
+//         render_booking_summary(frm);
+//     }
+
+//     // ================= FINANCE =================
+//     else if (frm.doc.payment_type === "Finance") {
+
+//         frm.set_df_property("down_payment_amount", "reqd", 1);
+//         frm.set_df_property("finance_amount", "reqd", 1);
+//         frm.set_df_property("hp_amount", "reqd", 1);
+
+//         let default_hp = 500;
+
+//         // Only set default HP if empty
+//         if (!frm.doc.hp_amount) {
+//             safe_set(frm, "hp_amount", default_hp);
+//         }
+
+//         calculate_finance_from_down(frm);
+//         render_booking_summary(frm);
+//     }
+// }
+
+function manage_payment_logic(frm) {
+
+    if (frm.doc.docstatus === 1) return;
+
+    // 🔥 ALWAYS recalculate first
+    calculate_final_amount(frm);
+
+    let final_amount = flt(frm.doc.final_amount);
+
+    // ================= CASH =================
+    if (frm.doc.payment_type === "Cash") {
+
+        // Remove finance values
+        safe_set(frm, "hp_amount", 0);
+        safe_set(frm, "finance_amount", 0);
+
+        // 🔥 Recalculate again after HP reset
+        calculate_final_amount(frm);
+
+        // Down = Final
+        safe_set(frm, "down_payment_amount", frm.doc.final_amount);
+
+        render_booking_summary(frm);
+    }
+
+    // ================= FINANCE =================
     else if (frm.doc.payment_type === "Finance") {
 
         frm.set_df_property("down_payment_amount", "reqd", 1);
         frm.set_df_property("finance_amount", "reqd", 1);
         frm.set_df_property("hp_amount", "reqd", 1);
-        frm.set_df_property("hypothecated_bank", "reqd", 1);
 
-        if (!frm.doc.hp_amount || frm.doc.hp_amount === 0) {
-            frm.set_value("hp_amount", 500);
+        let default_hp = 500;
+
+        if (!frm.doc.hp_amount) {
+            safe_set(frm, "hp_amount", default_hp);
         }
+
+        // 🔥 Recalculate after HP set
+        calculate_final_amount(frm);
+
+        calculate_finance_from_down(frm);
+        render_booking_summary(frm);
     }
 }
 // ================= FINANCE FROM DOWN / HP =================
@@ -669,141 +872,391 @@ function calculate_finance_from_down(frm) {
 
     if (frm.doc.docstatus === 1) return;
 
-    let final_amount = frm.doc.final_amount || 0;
-    let down = frm.doc.down_payment_amount || 0;
-    let hp = frm.doc.hp_amount || 0;
+    let final_amount = flt(frm.doc.final_amount);
+    let down = flt(frm.doc.down_payment_amount);
+    let hp = flt(frm.doc.hp_amount);
 
     let finance = final_amount - down - hp;
     if (finance < 0) finance = 0;
 
-    frm.set_value("finance_amount", finance);
+    finance = flt(finance, 2);
+
+    // ✅ ONLY update if changed
+    if (flt(frm.doc.finance_amount) !== finance) {
+        frm.set_value("finance_amount", finance);
+    }
 }
 // ================= DOWN FROM FINANCE =================
 
 function calculate_down_from_finance(frm) {
 
-    if (frm.doc.docstatus === 1) return; // ✅ Freeze after submit
+    if (frm.doc.docstatus === 1) return;
 
-    let final_amount = frm.doc.final_amount || 0;
-    let finance = frm.doc.finance_amount || 0;
-    let hp = frm.doc.hp_amount || 0;
+    let final_amount = flt(frm.doc.final_amount);
+    let finance = flt(frm.doc.finance_amount);
+    let hp = flt(frm.doc.hp_amount);
 
     let down = final_amount - finance - hp;
     if (down < 0) down = 0;
 
-    frm.set_value("down_payment_amount", down);
+    down = flt(down, 2);
+
+    // ✅ ONLY update if changed
+    if (flt(frm.doc.down_payment_amount) !== down) {
+        frm.set_value("down_payment_amount", down);
+    }
 }
-// ================= TOP DISPLAY =================
+// ================= Side DISPLAY =================
 
-function show_final_amount_top(frm) {
+function build_booking_summary_html(frm) {
 
-    // Remove existing (only inside this form)
-    frm.$wrapper.find("#final-amount-sticky").remove();
+    let currency = frm.doc.currency;
 
-    let final = frm.doc.final_amount || 0;
-    let formatted = format_currency(final, frm.doc.currency);
+    let vehicle = flt(frm.doc.amount);
 
-    let html = `
-        <div id="final-amount-sticky">
-            
-            <div class="final-header">
-                <span>Final Amount</span>
-                <button id="close-final-box">✕</button>
+    let reg_base = flt(frm.doc.registration_amount);
+    let reg_cgst = flt(frm.doc.road_cgst_amount);
+    let reg_sgst = flt(frm.doc.road_sgst_amount);
+    let reg_total = flt(frm.doc.road_total);
+
+    let road_tax = flt(frm.doc.road_tax_amount);
+    let nd = flt(frm.doc.nd_total);
+
+    let accessories = flt(get_nha_total(frm));
+    let hirise = flt(get_hirise_total(frm));
+
+    let warranty = flt(frm.doc.ex_warranty_amount);
+    let discount = flt(frm.doc.discount_amount);
+    let final_amount = flt(frm.doc.final_amount);
+
+    let payment_type = frm.doc.payment_type;
+    let down_payment = flt(frm.doc.down_payment_amount);
+    let finance_amount = flt(frm.doc.finance_amount);
+    let hp = flt(frm.doc.hp_amount);
+
+    // ================= SUBTOTAL =================
+    let subtotal =
+        vehicle +
+        reg_total +
+        nd +
+        accessories +
+        hirise +
+        warranty +
+        road_tax +
+        (payment_type === "Finance" ? hp : 0);
+
+    // ================= DISCOUNT DISPLAY =================
+    let discount_html = "";
+
+    if (discount > 0) {
+
+        if (frm.doc.discount_approved === "Approved") {
+
+            discount_html = `
+                <div class="summary-row summary-discount">
+                    <div>Discount</div>
+                    <div style="color:#16a34a;">
+                        (- ${format_currency(discount, currency)}) ✓
+                    </div>
+                </div>
+            `;
+
+        } else {
+
+            discount_html = `
+                <div class="summary-row">
+                    <div>Discount</div>
+                    <div style="color:#dc2626;">
+                        ${format_currency(discount, currency)} (Not Approved)
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // ================= RETURN HTML =================
+    return `
+        <div class="summary-row">
+            <div class="summary-label">Model</div>
+            <div class="summary-value">${frm.doc.item || "-"}</div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-label">Vehicle Amount</div>
+            <div class="summary-value">${format_currency(vehicle, currency)}</div>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        ${reg_base ? `
+        <div class="summary-row">
+            <div class="summary-label">Registration</div>
+            <div class="summary-value">${format_currency(reg_base, currency)}</div>
+        </div>` : ''}
+
+        ${reg_cgst ? `
+        <div class="summary-row">
+            <div class="summary-label">Reg CGST</div>
+            <div class="summary-value">${format_currency(reg_cgst, currency)}</div>
+        </div>` : ''}
+
+        ${reg_sgst ? `
+        <div class="summary-row">
+            <div class="summary-label">Reg SGST</div>
+            <div class="summary-value">${format_currency(reg_sgst, currency)}</div>
+        </div>` : ''}
+
+        ${reg_total ? `
+        <div class="summary-row summary-bold">
+            <div>Total Registration</div>
+            <div>${format_currency(reg_total, currency)}</div>
+        </div>` : ''}
+
+        ${road_tax ? `
+        <div class="summary-row">
+            <div class="summary-label">Road Tax</div>
+            <div class="summary-value">${format_currency(road_tax, currency)}</div>
+        </div>` : ''}
+
+        <div class="summary-divider"></div>
+
+        ${nd ? `
+        <div class="summary-row">
+            <div class="summary-label">Insurance (ND)</div>
+            <div class="summary-value">${format_currency(nd, currency)}</div>
+        </div>` : ''}
+
+        ${(accessories + hirise) ? `
+        <div class="summary-row">
+            <div class="summary-label">Accessories</div>
+            <div class="summary-value">${format_currency(accessories + hirise, currency)}</div>
+        </div>` : ''}
+
+        ${warranty ? `
+        <div class="summary-row">
+            <div class="summary-label">Extended Warranty</div>
+            <div class="summary-value">${format_currency(warranty, currency)}</div>
+        </div>` : ''}
+
+        <div class="summary-divider"></div>
+
+        ${payment_type === "Finance" ? `
+            <div class="summary-row summary-bold">
+                <div>Finance Breakdown</div>
+                <div></div>
             </div>
 
-            <div class="final-value">
-                ${formatted}
+            <div class="summary-row">
+                <div class="summary-label">HP Amount</div>
+                <div class="summary-value">${format_currency(hp, currency)}</div>
             </div>
 
+            <div class="summary-row">
+                <div class="summary-label">Down Payment</div>
+                <div class="summary-value">${format_currency(down_payment, currency)}</div>
+            </div>
+
+            <div class="summary-row">
+                <div class="summary-label">Finance Amount</div>
+                <div class="summary-value">${format_currency(finance_amount, currency)}</div>
+            </div>
+        ` : ''}
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-row summary-bold">
+            <div>Subtotal</div>
+            <div>${format_currency(subtotal, currency)}</div>
+        </div>
+
+        ${discount_html}
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-row summary-total">
+            <div>Final Amount</div>
+            <div class="summary-value">
+                ${format_currency(final_amount, currency)}
+            </div>
+        </div>
+    `;
+}
+
+function create_simple_sidebar(frm) {
+
+    // prevent duplicate sidebar
+    if (document.getElementById("custom-right-sidebar")) return;
+
+    frm.page.main.css({
+        display: "flex",
+        alignItems: "stretch",
+        gap: "20px"
+    });
+
+    let sidebar = `
+        <div id="custom-right-sidebar">
+            <div class="sidebar-title">Booking Preview</div>
+            <div id="booking-summary"></div>
         </div>
     `;
 
-    // Append ONLY inside this form
-    frm.$wrapper.append(html);
+    frm.page.main.append(sidebar);
 
-    // Add style only once
-    if (!document.getElementById("booking-final-style")) {
-        let style = document.createElement("style");
-        style.id = "booking-final-style";
-        style.innerHTML = `
-            #final-amount-sticky {
-                position: fixed;
-                top: 250px;
-                right: 20px;
-                width: 180px;
-                background: #ffffff;
-                border: 2px solid #0d6efd;
-                border-radius: 12px;
-                box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-                padding: 10px;
-                z-index: 1000;
-                transition: all 0.3s ease;
-            }
+    render_booking_summary(frm);
 
-            .final-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 13px;
-                font-weight: 600;
-                color: #555;
-                margin-bottom: 6px;
-            }
-
-            .final-header button {
-                background: transparent;
-                border: none;
-                font-size: 14px;
-                cursor: pointer;
-                color: #999;
-            }
-
-            .final-header button:hover {
-                color: #000;
-            }
-
-            .final-value {
-                font-size: 20px;
-                font-weight: 700;
-                color: #0d6efd;
-            }
-
-            @media (max-width: 768px) {
-                #final-amount-sticky {
-                    top: auto;
-                    bottom: 0;
-                    right: 0;
-                    left: 0;
-                    width: 100%;
-                    border-radius: 15px 15px 0 0;
-                    border: none;
-                    border-top: 3px solid #0d6efd;
-                    text-align: center;
-                    box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
-                }
-
-                .final-value {
-                    font-size: 18px;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Close button only for this form
-    frm.$wrapper.find("#close-final-box").click(function () {
-        frm.$wrapper.find("#final-amount-sticky").fadeOut(200);
-    });
+    inject_sidebar_styles();
 }
+function render_booking_summary(frm) {
+    let wrapper = document.getElementById("booking-summary");
+    if (wrapper) {
+        wrapper.innerHTML = build_booking_summary_html(frm);
+    }
+}
+
+function append_to_default_sidebar(frm) {
+
+    setTimeout(() => {
+
+        let wrapper = frm.page.wrapper;
+
+        // Remove old instance
+        wrapper.find(".booking-summary-system").remove();
+
+        // 🔥 Get full sidebar (not layout-side-section)
+        let sidebar = wrapper.find(".form-sidebar");
+        if (!sidebar.length) return;
+
+        let card = `
+            <div class="booking-summary-system booking-card">
+                <div class="sidebar-title">Booking Summary</div>
+                <div id="booking-summary-saved"></div>
+            </div>
+        `;
+
+        // 🔥 Add at absolute TOP
+        sidebar.prepend(card);
+
+        render_booking_summary_saved(frm);
+        inject_sidebar_styles();
+
+    }, 300);
+}
+
+function render_booking_summary_saved(frm) {
+    let wrapper = document.getElementById("booking-summary-saved");
+    if (wrapper) {
+        wrapper.innerHTML = build_booking_summary_html(frm);
+    }
+}
+
+function inject_sidebar_styles() {
+
+    if (document.getElementById("custom-sidebar-style")) return;
+
+    let style = document.createElement("style");
+    style.id = "custom-sidebar-style";
+
+    style.innerHTML = `
+        #custom-right-sidebar {
+            width: 300px;
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+
+        .booking-card {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+
+        .sidebar-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 15px;
+            text-align: center;
+            color: #111827;
+        }
+
+        /* 🔽 Reduced row spacing */
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 4px 0;   /* reduced from 6px */
+            font-size: 13px;
+            gap: 8px;
+            line-height: 1.3;
+        }
+
+        .summary-label {
+            color: #6b7280;
+            flex: 0 0 45%;
+        }
+
+        .summary-value {
+            flex: 1;
+            text-align: right;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .summary-divider {
+            border-top: 1px dashed #e5e7eb;
+            margin: 8px 0;   /* reduced */
+        }
+
+        .summary-bold {
+            font-weight: 600;
+        }
+
+        .summary-discount {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .summary-total {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: #2563eb;
+            color: #ffffff;
+
+            font-size: 13px; 
+            font-weight: 600;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+    `;
+
+
+
+    document.head.appendChild(style);
+}
+
+
+
 
 frappe.ui.form.on('Non Honda Accessories Item', {
 
     item: function (frm, cdt, cdn) {
 
+        if (frm.doc.docstatus === 1) return; // 🔒 freeze after submit
+
         let row = locals[cdt][cdn];
 
         if (!row.item) {
-            frappe.model.set_value(cdt, cdn, "amount", 0);
+            set_child_if_changed(cdt, cdn, "amount", 0);
             calculate_final_amount(frm);
             return;
         }
@@ -821,87 +1274,58 @@ frappe.ui.form.on('Non Honda Accessories Item', {
             },
             callback: function (r) {
 
+                if (frm.doc.docstatus === 1) return; // 🔒 double safety
+
                 let rate = 0;
 
                 if (r.message && r.message.length > 0) {
-                    rate = r.message[0].price_list_rate || 0;
+                    rate = flt(r.message[0].price_list_rate, 2);
                 }
 
-                frappe.model.set_value(cdt, cdn, "amount", rate);
+                set_child_if_changed(cdt, cdn, "amount", rate);
 
-                calculate_final_amount(frm); // 🔥 update final
+                calculate_final_amount(frm);
             }
         });
     },
 
     amount: function (frm) {
+        if (frm.doc.docstatus === 1) return;
         calculate_final_amount(frm);
     },
 
     table_kydz_remove: function (frm) {
+        if (frm.doc.docstatus === 1) return;
         calculate_final_amount(frm);
     }
-
 });
 
 frappe.ui.form.on('HIRISE Account Bills Item', {
 
     amount: function (frm) {
+        if (frm.doc.docstatus === 1) return;
         calculate_final_amount(frm);
     },
 
     table_apcj_add: function (frm) {
+        if (frm.doc.docstatus === 1) return;
         calculate_final_amount(frm);
     },
 
     table_apcj_remove: function (frm) {
+        if (frm.doc.docstatus === 1) return;
         calculate_final_amount(frm);
     }
-
 });
 
+function set_child_if_changed(cdt, cdn, fieldname, value) {
 
-function create_simple_sidebar(frm) {
+    let row = locals[cdt][cdn];
 
-    // Make layout flex
-    frm.page.main.css({
-        "display": "flex",
-        "align-items": "stretch"
-    });
+    let new_val = flt(value || 0, 2);
+    let current_val = flt(row[fieldname] || 0, 2);
 
-    // Remove if already exists
-    $("#custom-right-sidebar").remove();
-
-    let sidebar = `
-        <div id="custom-right-sidebar">
-            <div class="sidebar-title">New Booking Panel</div>
-            <div>This is visible only in New Form.</div>
-        </div>
-    `;
-
-    frm.page.main.append(sidebar);
-
-    if (!document.getElementById("custom-sidebar-style")) {
-
-        let style = document.createElement("style");
-        style.id = "custom-sidebar-style";
-        style.innerHTML = `
-            #custom-right-sidebar {
-                width: 260px;
-                background: #ffffff;
-                color: #7c7c7c;
-                padding: 20px;
-                margin-left: 20px;
-                min-height: 100vh;
-                border-left: 1px solid #d1d8dd;   /* 👈 ONLY LEFT BORDER */
-            }
-
-            .sidebar-title {
-                font-weight: 600;
-                margin-bottom: 10px;
-                color: #3f3f3f;
-            }
-        `;
-        document.head.appendChild(style);
+    if (new_val !== current_val) {
+        frappe.model.set_value(cdt, cdn, fieldname, new_val);
     }
 }

@@ -6,26 +6,30 @@
  "engine": "InnoDB",
  "field_order": [
   "booking_details_tab",
-  "tab_one_section",
+  "customer_details_section",
   "customer",
-  "address",
   "customer_name",
   "customer_hiris_id",
-  "mobile",
-  "remarks",
   "so",
   "nominee",
-  "column_break_zztq",
+  "column_break_kfjr",
+  "district",
+  "post_office",
+  "police_station",
+  "pin",
+  "column_break_nexf",
+  "mobile",
+  "rto",
+  "address",
+  "tab_one_section",
   "company",
   "booking_date",
+  "column_break_zztq",
   "cost_center",
-  "ref_no",
   "expected_delivery_date",
-  "police_station",
-  "rto",
-  "post_office",
-  "district",
-  "pin",
+  "column_break_wydy",
+  "ref_no",
+  "remarks",
   "section_break_kiww",
   "item",
   "column_break_rsht",
@@ -41,16 +45,17 @@
   "amount",
   "section_break_beqa",
   "payment_type",
-  "section_break_nvyi",
-  "down_payment_amount",
   "hp_amount",
   "delivery_order",
-  "column_break_ljbb",
+  "column_break_jfzt",
+  "down_payment_amount",
+  "column_break_oqkh",
   "finance_amount",
   "hypothecated_bank",
   "other_bank_name",
-  "section_break_unnx",
+  "section_break_nvyi",
   "final_amount",
+  "column_break_ljbb",
   "section_break_j6ab",
   "amended_from",
   "tab_2_tab",
@@ -457,6 +462,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "default": "600",
    "depends_on": "eval:doc.payment_type==\"Finance\"",
    "fieldname": "hp_amount",
    "fieldtype": "Currency",
@@ -468,10 +474,6 @@
    "fieldtype": "Date",
    "label": "Date",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_unnx",
-   "fieldtype": "Section Break"
   },
   {
    "allow_on_submit": 1,
@@ -558,7 +560,8 @@
    "fieldname": "discount_approved",
    "fieldtype": "Select",
    "label": "Discount Approved",
-   "options": "Approved\nReject\nPending"
+   "options": "Approved\nReject\nPending",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_mnbb",
@@ -609,13 +612,37 @@
    "fieldname": "table_apcj",
    "fieldtype": "Table",
    "options": "HIRISE Account Bills Item"
+  },
+  {
+   "fieldname": "customer_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_kfjr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_nexf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_wydy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_jfzt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_oqkh",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-27 14:23:04.879920",
+ "modified": "2026-03-01 21:56:44.139317",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
