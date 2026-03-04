@@ -246,15 +246,36 @@ frappe.pages['booking-form-custom'].on_page_load = function (wrapper) {
 
 				<div style="padding:15px">
 
-					<!-- CUSTOMER CARD -->
-					<div style="
-						background:#f8fafc;
-						padding:15px;
-						border-radius:8px;
-						margin-bottom:15px;
-						border-left:4px solid #3b82f6;
-					">
-						<h5 style="margin-bottom:10px;">Customer Information</h5>
+                    <!-- VEHICLE CARD -->
+                    <div style="
+                        background:#f0f9ff;
+                        padding:15px;
+                        border-radius:8px;
+                        margin-bottom:15px;
+                        border-left:4px solid #2563eb;
+                    ">
+                        <h5 style="margin-bottom:10px;">Vehicle Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <b>Model:</b><br>
+                                ${doc.item || ""}
+                            </div>
+                            <div class="col-md-6">
+                                <b>Colour:</b><br>
+                                ${doc.color_code || ""}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CUSTOMER CARD -->
+                    <div style="
+                        background:#f8fafc;
+                        padding:15px;
+                        border-radius:8px;
+                        margin-bottom:15px;
+                        border-left:4px solid #3b82f6;
+                    ">
+                        <h5 style="margin-bottom:10px;">Customer Information</h5>
 						<div class="row">
 							<div class="col-md-6">
 								<b>Customer:</b><br>

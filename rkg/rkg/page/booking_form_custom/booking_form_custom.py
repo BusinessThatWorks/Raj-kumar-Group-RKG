@@ -44,6 +44,8 @@ def get_booking_full_data(name):
             "name": doc.name,
             "customer": doc.customer,
             "mobile": doc.mobile,
+            "item": doc.item,                
+            "color_code": doc.color_code,    
             "payment_type": doc.payment_type,
             "price": doc.price,
             "amount": doc.amount,

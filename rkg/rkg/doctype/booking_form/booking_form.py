@@ -251,3 +251,30 @@ def update_discount_decision(docname, decision):
     doc.save(ignore_permissions=True)
 
     return "OK"
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def customer_query(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql("""
+        SELECT
+            name,
+            CONCAT(
+                customer_name,
+                ' | Hirise ID: ', IFNULL(hiris_id, '-')
+            ) AS description
+        FROM `tabCustomer`
+        WHERE docstatus < 2
+        AND (
+            name LIKE %(txt)s
+            OR customer_name LIKE %(txt)s
+            OR hiris_id LIKE %(txt)s
+            OR mobile_no LIKE %(txt)s
+        )
+        ORDER BY customer_name
+        LIMIT %(start)s, %(page_len)s
+    """, {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len
+    })

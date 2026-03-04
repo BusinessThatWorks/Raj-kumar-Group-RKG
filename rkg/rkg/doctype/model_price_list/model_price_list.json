@@ -9,6 +9,8 @@
   "model_no",
   "column_break_sadz",
   "item_group",
+  "column_break_jwyo",
+  "color_code",
   "column_break_pqhv",
   "company",
   "section_break_mgpl",
@@ -174,12 +176,21 @@
   {
    "fieldname": "column_break_jnxe",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_jwyo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "color_code",
+   "fieldtype": "Data",
+   "label": "Color"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-27 20:26:24.342074",
+ "modified": "2026-03-04 14:57:19.046643",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Model Price List",

@@ -1,5 +1,14 @@
 frappe.ui.form.on('Booking Form', {
 
+     onload: function(frm) {
+
+        frm.set_query("customer", function() {
+            return {
+                query: "rkg.rkg.doctype.booking_form.booking_form.customer_query"
+            };
+        });
+
+    },
     refresh: function (frm) {
 
 
@@ -22,6 +31,7 @@ frappe.ui.form.on('Booking Form', {
 
         if (frm.doc.docstatus === 1) {
             add_generate_decision_button(frm);
+            add_make_payment_button(frm);
         }
     },
     approver: async function (frm) {
@@ -108,7 +118,7 @@ frappe.ui.form.on('Booking Form', {
 
         if (!frm.doc.discount_amount || frm.doc.discount_amount <= 0) return;
 
-        if (!frm.doc.discount_approval) {
+        if (!frm.doc.approver) {
             frappe.throw("Please select Discount Approval first");
         }
 
@@ -116,7 +126,7 @@ frappe.ui.form.on('Booking Form', {
             method: "frappe.client.get",
             args: {
                 doctype: "Discount Approval",
-                name: frm.doc.discount_approval
+                name: frm.doc.approver
             },
             async: false,
             callback: function (r) {
@@ -178,6 +188,7 @@ frappe.ui.form.on('Booking Form', {
         frappe.db.get_doc("Model Price List", frm.doc.item)
             .then(doc => {
                 frm._model_price_doc = doc;
+                safe_set(frm, "color_code", doc.color_code);
                 safe_set(frm, "price", doc.ex_showroom);
                 frm._original_vehicle_price = flt(doc.ex_showroom, 2);
                 safe_set(frm, "road_tax_amount", doc.road_tax_amount);
@@ -210,61 +221,79 @@ frappe.ui.form.on('Booking Form', {
         set_nd_price(frm);
         calculate_nd(frm);
     },
-    hypothecated_bank: function (frm) {
-        if (frm.doc.payment_type !== "Finance") return;
-        if (frm.doc.hypothecated_bank !== "Others") {
+    // hypothecated_bank: function (frm) {
+    //     if (frm.doc.payment_type !== "Finance") return;
+    //     if (frm.doc.hypothecated_bank !== "Others") {
 
-            frm.set_value("other_bank_name", "");
+    //         frm.set_value("other_bank_name", "");
+    //         frm.set_df_property("other_bank_name", "hidden", 1);
+    //         frm.set_df_property("other_bank_name", "reqd", 0);
+    //         frm.refresh_field("other_bank_name");
+
+    //         return;
+    //     }
+    //     let d = new frappe.ui.Dialog({
+    //         title: "Create Customer Requested Bank",
+    //         fields: [
+    //             {
+    //                 label: "Customer Provided Bank Name",
+    //                 fieldname: "bank_name",
+    //                 fieldtype: "Data",
+    //                 reqd: 1
+    //             }
+    //         ],
+    //         primary_action_label: "Submit",
+    //         primary_action(values) {
+
+    //             frappe.call({
+    //                 method: "frappe.client.insert",
+    //                 args: {
+    //                     doc: {
+    //                         doctype: "Customer Req Hypothecated Bank",
+    //                         // booking_form: frm.doc.name,
+    //                         bank_name: values.bank_name
+    //                     }
+    //                 },
+    //                 callback: function () {
+
+    //                     frm.set_value("other_bank_name", values.bank_name);
+    //                     frm.set_df_property("other_bank_name", "hidden", 0);
+    //                     frm.set_df_property("other_bank_name", "reqd", 1);
+    //                     frm.refresh_field("other_bank_name");
+
+    //                     d._submitted = true;
+    //                     d.hide();
+    //                 }
+    //             });
+    //         }
+    //     });
+    //     d.onhide = function () {
+    //         if (!d._submitted) {
+    //             frm.set_value("hypothecated_bank", "");
+    //         }
+    //     };
+
+    //     d.show();
+    // },
+
+    hypothecated_bank: function (frm) {
+
+        if (frm.doc.payment_type !== "Finance") return;
+
+        if (frm.doc.hypothecated_bank === "Others") {
+
+            frm.set_df_property("other_bank_name", "hidden", 0);
+            frm.set_df_property("other_bank_name", "reqd", 1);
+
+        } else {
+
             frm.set_df_property("other_bank_name", "hidden", 1);
             frm.set_df_property("other_bank_name", "reqd", 0);
-            frm.refresh_field("other_bank_name");
-
-            return;
+            frm.set_value("other_bank_name", "");
         }
-        let d = new frappe.ui.Dialog({
-            title: "Create Customer Requested Bank",
-            fields: [
-                {
-                    label: "Customer Provided Bank Name",
-                    fieldname: "bank_name",
-                    fieldtype: "Data",
-                    reqd: 1
-                }
-            ],
-            primary_action_label: "Submit",
-            primary_action(values) {
 
-                frappe.call({
-                    method: "frappe.client.insert",
-                    args: {
-                        doc: {
-                            doctype: "Customer Req Hypothecated Bank",
-                            // booking_form: frm.doc.name,
-                            bank_name: values.bank_name
-                        }
-                    },
-                    callback: function () {
-
-                        frm.set_value("other_bank_name", values.bank_name);
-                        frm.set_df_property("other_bank_name", "hidden", 0);
-                        frm.set_df_property("other_bank_name", "reqd", 1);
-                        frm.refresh_field("other_bank_name");
-
-                        d._submitted = true;
-                        d.hide();
-                    }
-                });
-            }
-        });
-        d.onhide = function () {
-            if (!d._submitted) {
-                frm.set_value("hypothecated_bank", "");
-            }
-        };
-
-        d.show();
+        frm.refresh_field("other_bank_name");
     },
-
     payment_type: function (frm) {
         manage_payment_logic(frm);
         toggle_other_bank(frm);
@@ -497,21 +526,6 @@ function add_generate_decision_button(frm) {
             ">
 
                 <div style="margin-bottom:6px;">
-                    <strong>Ex-Showroom Price:</strong> 
-                    ${format_currency(original_price, currency)}
-                </div>
-
-                <div style="margin-bottom:6px;">
-                    <strong>Approver Limit:</strong> 
-                    ${allowed_percent}%
-                </div>
-
-                <div style="margin-bottom:6px;">
-                    <strong>Max Allowed Discount:</strong> 
-                    ${format_currency(max_allowed_exclusive, currency)}
-                </div>
-
-                <div style="margin-bottom:6px;">
                     <strong>Requested Discount:</strong> 
                     <div style="color:#2563eb;">
                         ${formatted_amount}
@@ -536,6 +550,47 @@ function add_generate_decision_button(frm) {
     }).addClass("btn-primary");
 }
 
+function add_make_payment_button(frm) {
+
+    if (frm.doc.docstatus !== 1) return;
+
+    frm.add_custom_button("Make Payment", function () {
+
+        if (!frm.doc.payment_account) {
+            frappe.throw("Please select Payment Account in Booking Form");
+        }
+
+        if (!frm.doc.customer) {
+            frappe.throw("Customer not found");
+        }
+
+        let debit_account = frm.doc.payment_account;
+        let credit_account = frm.doc.debit_to || null; // optional fallback
+
+        let amount = flt(frm.doc.final_amount);
+
+        // Create Journal Entry
+        frappe.new_doc("Journal Entry", {
+            voucher_type: "Journal Entry",
+            posting_date: frappe.datetime.get_today(),
+            company: frm.doc.company,
+
+            accounts: [
+                {
+                    account: debit_account,
+                    debit_in_account_currency: amount
+                },
+                {
+                    account: frm.doc.customer,
+                    party_type: "Customer",
+                    party: frm.doc.customer,
+                    credit_in_account_currency: amount
+                }
+            ]
+        });
+
+    }).addClass("btn-success");
+}
 
 async function validate_discount_limit(frm){
 
@@ -1072,11 +1127,9 @@ function build_booking_summary_html(frm) {
 
         <div class="summary-divider"></div>
 
-        <div class="summary-row summary-total">
+        <div class="summary-row summary-bold">
             <div>Final Amount</div>
-            <div class="summary-value">
-                ${format_currency(final_amount, currency)}
-            </div>
+            <div>${format_currency(final_amount, currency)}</div>
         </div>
     `;
 }
@@ -1219,21 +1272,6 @@ function inject_sidebar_styles() {
         .summary-discount {
             color: #dc2626;
             font-weight: 600;
-        }
-
-        .summary-total {
-            margin-top: 8px;
-            padding: 8px 10px;
-            border-radius: 8px;
-            background: #2563eb;
-            color: #ffffff;
-
-            font-size: 13px; 
-            font-weight: 600;
-
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
     `;
