@@ -104,14 +104,37 @@ frappe.ui.form.on('Booking Form', {
 
         frm._discount_processing = false;
     },
-    validate: function (frm) {
-        if (frm.doc.discount_amount > 0 && !frm.doc.approver) {
-            frappe.throw("Approver is mandatory when Discount Amount is entered.");
+    validate(frm) {
+
+        if (!frm.doc.discount_amount || frm.doc.discount_amount <= 0) return;
+
+        if (!frm.doc.discount_approval) {
+            frappe.throw("Please select Discount Approval first");
         }
 
-        if (!frm.doc.discount_approved) {
-            frm.doc.discount_approved = "Pending";
-        }
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Discount Approval",
+                name: frm.doc.discount_approval
+            },
+            async: false,
+            callback: function (r) {
+
+                let max_percent = r.message.approver_limit_percentage;
+                let base_price = frm.doc.price;
+
+                let max_allowed = flt((base_price * max_percent) / 100, 2);
+
+                if (frm.doc.discount_amount > max_allowed) {
+                    frappe.throw(
+                        `Discount exceeds allowed limit.\n` +
+                        `Approver Limit: ${max_percent}%\n` +
+                        `Maximum Allowed: ₹ ${max_allowed}`
+                    );
+                }
+            }
+        });
     },
     // ================= CUSTOMER FETCH =================
 
@@ -538,26 +561,20 @@ async function validate_discount_limit(frm){
 
     let price_base = flt(frm._original_vehicle_price || frm.doc.price, 2);
 
-    // 🚫 Prevent discount > price
-    if(frm.doc.discount_amount > price_base){
-        frappe.msgprint("Discount cannot be greater than Ex-Showroom price");
-        return false;
-    }
-
     let max_allowed = flt((price_base * allowed_percent) / 100, 2);
 
+    // convert inclusive → exclusive
     let user_exclusive = flt(frm.doc.discount_amount / 1.18, 2);
 
     if(user_exclusive > max_allowed){
 
         frappe.msgprint({
             title: "Discount Limit Exceeded",
-            message: `
-                Maximum allowed discount is ₹ ${max_allowed}
-            `,
+            message: `Maximum allowed discount is ₹ ${max_allowed}`,
             indicator: "red"
         });
 
+        frm.set_value("discount_amount", 0);
         return false;
     }
 
@@ -750,9 +767,9 @@ function get_hirise_total(frm) {
 
 function calculate_final_amount(frm) {
 
-    if (frm.doc.docstatus === 1 && frm.doc.discount_approved !== "Approved") return;
+    // Allow calculation even after submit
+    // because price changes after approval
 
-    // ================= BASE TOTAL =================
     let base_total =
         flt(frm.doc.amount) +
         flt(frm.doc.road_total) +
@@ -768,46 +785,20 @@ function calculate_final_amount(frm) {
 
     base_total = flt(base_total, 2);
 
-    // ================= DISCOUNT LOGIC =================
+    if (base_total < 0) base_total = 0;
 
-    let user_discount = flt(frm.doc.discount_amount);
-
-    // Convert inclusive → exclusive
-    let discount_calc = flt(user_discount / 1.18, 2);
-
-    // ⭐ IMPORTANT: Limit discount only to vehicle price (not subtotal)
-    let vehicle_base = flt(frm._original_vehicle_price || frm.doc.price);
-
-    if (discount_calc > vehicle_base) {
-        discount_calc = vehicle_base;
+    if (flt(frm.doc.final_amount) !== base_total) {
+        frm.set_value("final_amount", base_total);
     }
 
-    let final_total = base_total;
-
-    // Deduct ONLY if approved
-    if (discount_calc > 0 && frm.doc.discount_approved === "Approved") {
-        final_total = base_total - discount_calc;
-    }
-
-    final_total = flt(final_total, 2);
-
-    if (final_total < 0) final_total = 0;
-
-    // ================= FINAL SET =================
-
-    if (flt(frm.doc.final_amount) !== final_total) {
-        frm.set_value("final_amount", final_total);
-    }
-
-    // ================= FINANCE SYNC =================
+    // ================= FINANCE =================
 
     if (frm.doc.payment_type === "Finance") {
 
         let down = flt(frm.doc.down_payment_amount);
         let hp = flt(frm.doc.hp_amount);
 
-        let finance = final_total - down - hp;
-
+        let finance = base_total - down - hp;
         if (finance < 0) finance = 0;
 
         finance = flt(finance, 2);
