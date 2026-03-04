@@ -177,16 +177,20 @@
    "label": "HSN/SAC"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "price",
    "fieldtype": "Currency",
-   "label": "Price"
+   "label": "Price",
+   "read_only": 1
   },
   {
    "fieldname": "cgst_rate",
    "fieldtype": "Percent",
-   "label": "CGST Rate"
+   "label": "CGST Rate",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "cgst_amount",
    "fieldtype": "Currency",
    "label": "CGST Amount",
@@ -195,15 +199,18 @@
   {
    "fieldname": "sgst_rate",
    "fieldtype": "Percent",
-   "label": "SGST Rate"
+   "label": "SGST Rate",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "sgst_amount",
    "fieldtype": "Currency",
    "label": "SGST Amount",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "label": "Amount",
@@ -386,6 +393,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:doc.payment_type==\"Finance\"",
    "fieldname": "down_payment_amount",
    "fieldtype": "Currency",
@@ -396,6 +404,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:doc.payment_type==\"Finance\"",
    "fieldname": "finance_amount",
    "fieldtype": "Currency",
@@ -642,7 +651,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-01 21:56:44.139317",
+ "modified": "2026-03-04 10:00:14.327987",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",

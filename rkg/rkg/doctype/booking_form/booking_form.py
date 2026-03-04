@@ -20,23 +20,21 @@ class BookingForm(Document):
     # =====================================================
 
     def get_base_total(self):
-        return flt(
+        base = (
             flt(self.amount)
             + flt(self.road_total)
             + flt(self.nd_total)
             + flt(self.ex_warranty_amount)
             + flt(self.road_tax_amount)
             + self.get_nha_total()
-            + self.get_hirise_total(),
-            2
+            + self.get_hirise_total()
         )
+        return flt(base, 2)
 
     def get_total_with_finance(self):
         base_total = self.get_base_total()
-
         if self.payment_type == "Finance":
             base_total += flt(self.hp_amount)
-
         return flt(base_total, 2)
 
     # =====================================================
@@ -44,74 +42,79 @@ class BookingForm(Document):
     # =====================================================
 
     def validate(self):
-
-        # -----------------------------
-        # Normalize all numeric fields
-        # -----------------------------
-        self.discount_amount = flt(self.discount_amount, 2)
+        # Normalize numeric fields
         self.hp_amount = flt(self.hp_amount, 2)
         self.amount = flt(self.amount, 2)
         self.road_total = flt(self.road_total, 2)
         self.nd_total = flt(self.nd_total, 2)
         self.ex_warranty_amount = flt(self.ex_warranty_amount, 2)
         self.road_tax_amount = flt(self.road_tax_amount, 2)
+        self.discount_amount = flt(self.discount_amount, 2)
 
-        # -----------------------------
-        # Recalculate full total
-        # -----------------------------
-        total = self.get_total_with_finance()
+        total = flt(self.get_total_with_finance(), 2)
 
-        # -----------------------------
-        # Prevent negative discount
-        # -----------------------------
+        # ===============================
+        # DYNAMIC DISCOUNT VALIDATION
+        # ===============================
+
         if self.discount_amount < 0:
-            self.discount_amount = 0
+            frappe.throw("Discount cannot be negative")
 
-        # -----------------------------
-        # Discount validation
-        # -----------------------------
         if self.discount_amount > 0:
 
             if not self.approver:
-                frappe.throw("Approver is mandatory when discount is entered.")
+                frappe.throw("Approver must be selected")
 
-            allowed_percent = frappe.db.get_value(
+            if self.price <= 0:
+                frappe.throw("Vehicle price must be greater than zero")
+
+            # 🔥 ALWAYS validate against ORIGINAL price
+            original_price = flt(self.price, 2)
+
+            approval_doc = frappe.db.get_value(
                 "Discount Approval",
                 {"approval_user": self.approver},
-                "discount_percent"
-            ) or 0
+                ["discount_percent"],
+                as_dict=True
+            )
 
-            allowed_percent = flt(allowed_percent)
+            if not approval_doc:
+                frappe.throw("No discount limit configured for selected approver")
 
-            max_allowed = flt((total * allowed_percent) / 100, 2)
+            max_percent = flt(approval_doc.discount_percent)
 
-            if self.discount_amount > max_allowed:
+            if max_percent <= 0:
+                frappe.throw("Invalid approver discount configuration")
+
+            # ✅ Max allowed discount (GST exclusive)
+            max_allowed_exclusive = flt((original_price * max_percent) / 100, 2)
+
+            # ✅ Convert user input to GST exclusive
+            gst_exclusive_discount = flt(self.discount_amount / 1.18, 2)
+
+            if gst_exclusive_discount > max_allowed_exclusive:
                 frappe.throw(
-                    f"Discount exceeds allowed limit ({allowed_percent}%). "
-                    f"Maximum allowed: ₹ {max_allowed}"
+                    f"""
+                    Discount exceeds allowed limit.
+
+                    Approver Limit: {max_percent}%
+                    Maximum Allowed (Excl GST): ₹ {max_allowed_exclusive}
+                    Entered (Excl GST): ₹ {gst_exclusive_discount}
+                    """
                 )
 
-        # -----------------------------
-        # Prevent discount > total
-        # -----------------------------
-        if self.discount_amount > total:
-            self.discount_amount = total
+        
 
-        # -----------------------------
-        # Final amount calculation
-        # -----------------------------
-        # Apply discount ONLY if approved
+        # ===============================
+        # FINAL AMOUNT CALCULATION
+        # ===============================
+
+        final_total = total
         if self.discount_amount > 0 and self.discount_approved == "Approved":
-            calculated_final = flt(total - self.discount_amount, 2)
-        else:
-            calculated_final = flt(total, 2)
+            gst_exclusive_discount = flt(self.discount_amount / 1.18, 2)
+            final_total = flt(total - gst_exclusive_discount, 2)
 
-        if calculated_final < 0:
-            calculated_final = 0
-
-        # Only update if changed (important)
-        if abs(flt(self.final_amount) - calculated_final) > 0.01:
-            self.final_amount = calculated_final
+        self.final_amount = max(final_total, 0)
 
     # =====================================================
     # SUBMIT
@@ -122,16 +125,20 @@ class BookingForm(Document):
             self.discount_approved = "Pending"
 
     # =====================================================
-    # EDIT AFTER SUBMIT CONTROL
+    # AFTER SUBMIT CONTROL
     # =====================================================
 
     def before_update_after_submit(self):
-
-        # Allow cancel freely
         if self.docstatus == 2:
             return
 
         db_doc = frappe.get_doc(self.doctype, self.name)
+
+        # Allow system discount approval update
+        system_discount_update = (
+            db_doc.discount_approved == "Pending"
+            and self.discount_approved in ["Approved", "Reject"]
+        )
 
         locked_fields = [
             "finance_amount",
@@ -146,22 +153,17 @@ class BookingForm(Document):
         ]
 
         for field in locked_fields:
+            if system_discount_update:
+                continue
             if abs(flt(getattr(self, field)) - flt(getattr(db_doc, field))) > 0.01:
                 frappe.throw(
                     f"Not allowed to change {field.replace('_', ' ').title()} after submission"
                 )
 
-        # Discount modification rule
-        if db_doc.discount_approved != "Pending":
+        # Prevent discount tampering after decision
+        if db_doc.discount_approved in ["Approved", "Reject"]:
             if abs(flt(self.discount_amount) - flt(db_doc.discount_amount)) > 0.01:
                 frappe.throw("Cannot modify discount after decision taken")
-
-        # Prevent manual final amount tampering
-        decision_changed = self.discount_approved != db_doc.discount_approved
-
-        if not decision_changed:
-            if abs(flt(self.final_amount) - flt(db_doc.final_amount)) > 0.01:
-                frappe.throw("Final Amount cannot be modified manually after submission")
 
 
 # =========================================================
@@ -185,18 +187,92 @@ def update_discount_decision(docname, decision):
     if doc.discount_approved in ["Approved", "Reject"]:
         frappe.throw("Decision already taken")
 
-    total = doc.get_total_with_finance()
+    if doc.price <= 0:
+        frappe.throw("Ex-showroom price must be greater than zero")
+
+    if doc.discount_amount < 0:
+        frappe.throw("Invalid discount amount")
+
+    # Get approver limit
+    approval_doc = frappe.db.get_value(
+        "Discount Approval",
+        {"approval_user": doc.approver},
+        ["discount_percent"],
+        as_dict=True
+    )
+
+    if not approval_doc:
+        frappe.throw("No discount limit configured for this approver")
+
+    max_percent = flt(approval_doc.discount_percent)
+
+    # Convert inclusive → exclusive
+    gst_exclusive_discount = flt(doc.discount_amount / 1.18, 2)
+
+    max_allowed_discount = flt((doc.price * max_percent) / 100, 2)
+
+    if gst_exclusive_discount > max_allowed_discount:
+        frappe.throw(f"Discount exceeds {max_percent}% approval limit")
+
+    # =====================================================
+    # DECISION LOGIC
+    # =====================================================
 
     if decision == "Approved":
 
+        # 1️⃣ Reduce vehicle price
+        new_price = flt(doc.price - gst_exclusive_discount, 2)
+        doc.price = new_price
+
+        # 2️⃣ Recalculate GST
+        doc.cgst_amount = flt((new_price * doc.cgst_rate) / 100, 2)
+        doc.sgst_amount = flt((new_price * doc.sgst_rate) / 100, 2)
+
+        # 3️⃣ Recalculate vehicle amount
+        doc.amount = flt(new_price + doc.cgst_amount + doc.sgst_amount, 2)
+
         doc.discount_approved = "Approved"
-        doc.final_amount = flt(total - doc.discount_amount, 2)
 
-    else:  # Reject
-
+    else:
         doc.discount_approved = "Reject"
         doc.discount_amount = 0
-        doc.final_amount = flt(total, 2)
+
+        doc.cgst_amount = flt((doc.price * doc.cgst_rate) / 100, 2)
+        doc.sgst_amount = flt((doc.price * doc.sgst_rate) / 100, 2)
+        doc.amount = flt(doc.price + doc.cgst_amount + doc.sgst_amount, 2)
+
+    # =====================================================
+    # 🔥 RECALCULATE FULL TOTAL (VERY IMPORTANT)
+    # =====================================================
+
+    base_total = (
+        flt(doc.amount)
+        + flt(doc.road_total)
+        + flt(doc.nd_total)
+        + flt(doc.ex_warranty_amount)
+        + flt(doc.road_tax_amount)
+        + doc.get_nha_total()
+        + doc.get_hirise_total()
+    )
+
+    if doc.payment_type == "Finance":
+        base_total += flt(doc.hp_amount)
+
+    doc.final_amount = flt(base_total, 2)
+
+    # =====================================================
+    # 🔥 FINANCE RECALCULATION
+    # =====================================================
+
+    if doc.payment_type == "Finance":
+        finance = flt(
+            doc.final_amount
+            - flt(doc.down_payment_amount)
+            - flt(doc.hp_amount),
+            2
+        )
+
+        doc.finance_amount = max(finance, 0)
 
     doc.save(ignore_permissions=True)
 

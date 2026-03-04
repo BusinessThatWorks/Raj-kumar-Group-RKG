@@ -1,0 +1,27 @@
+{
+ "content": null,
+ "creation": "2026-03-03 17:32:49.683535",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "octicon octicon-graph",
+ "idx": 0,
+ "modified": "2026-03-03 17:32:49.683535",
+ "modified_by": "Administrator",
+ "module": "rkg",
+ "name": "booking-form-custom",
+ "owner": "Administrator",
+ "page_name": "booking-form-custom",
+ "roles": [
+  {
+   "role": "Godown Incharge"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Booking Form"
+}
