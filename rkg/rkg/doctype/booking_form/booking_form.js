@@ -181,6 +181,21 @@ frappe.ui.form.on('Booking Form', {
         });
 
     },
+    company: function(frm) {
+        frm.set_query('cost_center', function() {
+            if (!frm.doc.company) {
+                return {
+                    filters: {}
+                };
+            }
+            return {
+                filters: {
+                    'company': frm.doc.company
+                }
+            };
+        });
+        frm.refresh_field('cost_center');
+    },
     // ================= ITEM FETCH =================
     item: function (frm) {
 

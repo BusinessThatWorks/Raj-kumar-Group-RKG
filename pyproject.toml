@@ -4,7 +4,7 @@ authors = [
     { name = "developer", email = "suman.das@clapgrow.com"}
 ]
 description = "rkg"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
