@@ -307,7 +307,6 @@ frappe.pages['booking-form-custom'].on_page_load = function (wrapper) {
 							</div>
 							<div class="col-md-6">
 								<p>Accessories: ${format_currency(totals.nha_total)}</p>
-								<p>HIRISE: ${format_currency(totals.hirise_total)}</p>
 								<p>Extended Warranty: ${format_currency(doc.ex_warranty_amount)}</p>
 								<p>Discount: ${format_currency(doc.discount_amount)}</p>
 							</div>

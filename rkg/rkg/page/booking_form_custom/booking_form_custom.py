@@ -37,7 +37,6 @@ def get_booking_full_data(name):
 
     # Child totals
     nha_total = sum(flt(d.amount) for d in doc.table_kydz or [])
-    hirise_total = sum(flt(d.amount) for d in doc.table_apcj or [])
 
     return {
         "main": {
@@ -65,7 +64,6 @@ def get_booking_full_data(name):
             "hirise_items": doc.table_apcj
         },
         "totals": {
-            "nha_total": flt(nha_total, 2),
-            "hirise_total": flt(hirise_total, 2)
+            "nha_total": flt(nha_total, 2)
         }
     }

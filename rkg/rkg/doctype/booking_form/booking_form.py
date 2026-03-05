@@ -278,3 +278,126 @@ def customer_query(doctype, txt, searchfield, start, page_len, filters):
         "start": start,
         "page_len": page_len
     })
+
+
+# =========================================================
+# PAYMENT JOURNAL ENTRY API
+# =========================================================
+
+@frappe.whitelist()
+def make_payment_journal_entry(booking_name):
+
+    booking = frappe.get_doc("Booking Form", booking_name)
+
+    # =========================================
+    # BASIC VALIDATION
+    # =========================================
+
+    if booking.docstatus != 1:
+        frappe.throw("Booking must be submitted")
+
+    if not booking.payment_account:
+        frappe.throw("Payment Account is required")
+
+    if not booking.customer:
+        frappe.throw("Customer is required")
+
+    # =========================================
+    # PAYMENT CALCULATION
+    # =========================================
+
+    total_amount = flt(booking.final_amount, 2)
+    already_paid = flt(booking.amount_recieved, 2)
+    outstanding = flt(total_amount - already_paid, 2)
+
+    if outstanding <= 0:
+        frappe.throw("Booking already fully paid")
+
+    # =========================================
+    # MAP SELECT (Cash / Bank) → REAL ACCOUNT
+    # =========================================
+
+    if booking.payment_account == "Cash":
+        debit_account = frappe.get_value(
+            "Company",
+            booking.company,
+            "default_cash_account"
+        )
+
+    elif booking.payment_account == "Bank":
+        debit_account = frappe.get_value(
+            "Company",
+            booking.company,
+            "default_bank_account"
+        )
+
+    else:
+        frappe.throw("Invalid Payment Account selection")
+
+    if not debit_account:
+        frappe.throw(
+            f"Default {booking.payment_account} account not set in Company"
+        )
+
+    # Extra safety check
+    if not frappe.db.exists("Account", debit_account):
+        frappe.throw(f"Account not found: {debit_account}")
+
+    # =========================================
+    # GET RECEIVABLE ACCOUNT
+    # =========================================
+
+    receivable_account = frappe.get_value(
+        "Company",
+        booking.company,
+        "default_receivable_account"
+    )
+
+    if not receivable_account:
+        frappe.throw("Default Receivable Account not set in Company")
+
+    # =========================================
+    # CREATE JOURNAL ENTRY
+    # =========================================
+
+    je = frappe.new_doc("Journal Entry")
+    je.voucher_type = "Journal Entry"
+    je.posting_date = frappe.utils.today()
+    je.company = booking.company
+    je.user_remark = f"Payment against Booking {booking.name}"
+
+    # 🚨 IMPORTANT: Set cost center at document level
+    je.cost_center = booking.cost_center
+
+    # 🔹 Debit → Cash/Bank
+    je.append("accounts", {
+        "account": debit_account,
+        "debit_in_account_currency": outstanding,
+        "cost_center": booking.cost_center,
+    })
+
+    # 🔹 Credit → Customer Receivable
+    je.append("accounts", {
+        "account": receivable_account,
+        "party_type": "Customer",
+        "party": booking.customer,
+        "credit_in_account_currency": outstanding,
+        "cost_center": booking.cost_center,
+    })
+
+    # 🔥 Let ERPNext auto fill any missing defaults
+    je.set_missing_values()
+
+    je.insert()
+    # je.submit()
+
+    # =========================================
+    # UPDATE BOOKING PAYMENT
+    # =========================================
+
+    new_paid_amount = flt(already_paid + outstanding, 2)
+
+    booking.db_set("amount_recieved", new_paid_amount)
+    booking.db_set("modified_by", frappe.session.user)
+
+    return je.name

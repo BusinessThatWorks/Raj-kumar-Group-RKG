@@ -221,60 +221,7 @@ frappe.ui.form.on('Booking Form', {
         set_nd_price(frm);
         calculate_nd(frm);
     },
-    // hypothecated_bank: function (frm) {
-    //     if (frm.doc.payment_type !== "Finance") return;
-    //     if (frm.doc.hypothecated_bank !== "Others") {
-
-    //         frm.set_value("other_bank_name", "");
-    //         frm.set_df_property("other_bank_name", "hidden", 1);
-    //         frm.set_df_property("other_bank_name", "reqd", 0);
-    //         frm.refresh_field("other_bank_name");
-
-    //         return;
-    //     }
-    //     let d = new frappe.ui.Dialog({
-    //         title: "Create Customer Requested Bank",
-    //         fields: [
-    //             {
-    //                 label: "Customer Provided Bank Name",
-    //                 fieldname: "bank_name",
-    //                 fieldtype: "Data",
-    //                 reqd: 1
-    //             }
-    //         ],
-    //         primary_action_label: "Submit",
-    //         primary_action(values) {
-
-    //             frappe.call({
-    //                 method: "frappe.client.insert",
-    //                 args: {
-    //                     doc: {
-    //                         doctype: "Customer Req Hypothecated Bank",
-    //                         // booking_form: frm.doc.name,
-    //                         bank_name: values.bank_name
-    //                     }
-    //                 },
-    //                 callback: function () {
-
-    //                     frm.set_value("other_bank_name", values.bank_name);
-    //                     frm.set_df_property("other_bank_name", "hidden", 0);
-    //                     frm.set_df_property("other_bank_name", "reqd", 1);
-    //                     frm.refresh_field("other_bank_name");
-
-    //                     d._submitted = true;
-    //                     d.hide();
-    //                 }
-    //             });
-    //         }
-    //     });
-    //     d.onhide = function () {
-    //         if (!d._submitted) {
-    //             frm.set_value("hypothecated_bank", "");
-    //         }
-    //     };
-
-    //     d.show();
-    // },
+    
 
     hypothecated_bank: function (frm) {
 
@@ -556,37 +503,26 @@ function add_make_payment_button(frm) {
 
     frm.add_custom_button("Make Payment", function () {
 
-        if (!frm.doc.payment_account) {
-            frappe.throw("Please select Payment Account in Booking Form");
-        }
+        frappe.call({
+            method: "rkg.rkg.doctype.booking_form.booking_form.make_payment_journal_entry",
+            args: {
+                booking_name: frm.doc.name
+            },
+            freeze: true,
+            freeze_message: "Creating Journal Entry...",
+            callback: function (r) {
 
-        if (!frm.doc.customer) {
-            frappe.throw("Customer not found");
-        }
+                if (r.message) {
 
-        let debit_account = frm.doc.payment_account;
-        let credit_account = frm.doc.debit_to || null; // optional fallback
+                    frappe.show_alert({
+                        message: "Journal Entry Created: " + r.message,
+                        indicator: "green"
+                    });
 
-        let amount = flt(frm.doc.final_amount);
-
-        // Create Journal Entry
-        frappe.new_doc("Journal Entry", {
-            voucher_type: "Journal Entry",
-            posting_date: frappe.datetime.get_today(),
-            company: frm.doc.company,
-
-            accounts: [
-                {
-                    account: debit_account,
-                    debit_in_account_currency: amount
-                },
-                {
-                    account: frm.doc.customer,
-                    party_type: "Customer",
-                    party: frm.doc.customer,
-                    credit_in_account_currency: amount
+                    frappe.set_route("Form", "Journal Entry", r.message);
+                    frm.reload_doc();
                 }
-            ]
+            }
         });
 
     }).addClass("btn-success");
