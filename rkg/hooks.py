@@ -192,7 +192,10 @@ doc_events = {
         "autoname": "rkg.utils.sales_invoice.autoname_sales_invoice"
     },
     "Journal Entry": {
-        "autoname": "rkg.utils.journal_entry.autoname_journal_entry"
+        "autoname": "rkg.utils.journal_entry.autoname_journal_entry",
+        "on_submit": "rkg.utils.journal_entry.update_booking_amount_recieved",
+        "on_cancel": "rkg.utils.journal_entry.revert_booking_amount_recieved",
+        "on_trash": "rkg.utils.journal_entry.revert_booking_amount_recieved"
     },
     "Booking Form": {
         "autoname": "rkg.utils.booking_form.autoname_booking_form_entry"

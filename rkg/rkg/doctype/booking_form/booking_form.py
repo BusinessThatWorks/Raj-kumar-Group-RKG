@@ -286,15 +286,15 @@ def customer_query(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def make_payment_journal_entry(booking_name):
+    """
+    Create a Journal Entry for the Booking Form payment.
+    Handles Cash or Bank payment account, updates Booking Form amount_recieved via hooks.
+    """
     booking = frappe.get_doc("Booking Form", booking_name)
 
-
-    if not frappe.db.exists("Cost Center", booking.cost_center):
-        frappe.throw(f"Cost Center {booking.cost_center} does not exist")
-
-    if not frappe.db.exists("Company", booking.company):
-        frappe.throw(f"Company {booking.company} does not exist")
-
+    # -------------------------------
+    # VALIDATION
+    # -------------------------------
     if booking.docstatus != 1:
         frappe.throw("Booking must be submitted")
 
@@ -307,35 +307,53 @@ def make_payment_journal_entry(booking_name):
     if not booking.company:
         frappe.throw("Company is required")
 
-    total_amount = flt(booking.final_amount, 2)
-    already_paid = flt(booking.amount_recieved, 2)
-    outstanding = flt(total_amount - already_paid, 2)
+    if not frappe.db.exists("Cost Center", booking.cost_center):
+        frappe.throw(f"Cost Center {booking.cost_center} does not exist")
+
+    if not frappe.db.exists("Company", booking.company):
+        frappe.throw(f"Company {booking.company} does not exist")
+
+    # -------------------------------
+    # CALCULATE AMOUNTS
+    # -------------------------------
+    total_amount = flt(booking.final_amount)
+    already_paid = flt(booking.amount_recieved)
+    outstanding = total_amount - already_paid
 
     if outstanding <= 0:
         frappe.throw("Booking already fully paid")
 
-    # Get Debit Account based on payment_account type
+    # -------------------------------
+    # GET ACCOUNTS
+    # -------------------------------
     if booking.payment_account == "Cash":
         debit_account = frappe.get_value("Company", booking.company, "default_cash_account")
+        if not debit_account:
+            frappe.throw(f"No default Cash Account set for Company {booking.company}")
     elif booking.payment_account == "Bank":
         debit_account = frappe.get_value("Company", booking.company, "default_bank_account")
+        if not debit_account:
+            frappe.throw(f"No default Bank Account set for Company {booking.company}")
     else:
         frappe.throw(f"Unsupported payment account type: {booking.payment_account}")
 
     receivable_account = frappe.get_value("Company", booking.company, "default_receivable_account")
+    if not receivable_account:
+        frappe.throw(f"No default Receivable Account set for Company {booking.company}")
 
-    # Validate Cost Center belongs to selected Company
-    cost_center_doc = frappe.get_doc("Cost Center", booking.cost_center)
-    if cost_center_doc.company != booking.company:
-        frappe.throw(f"Selected Cost Center '{booking.cost_center}' does not belong to Company '{booking.company}'")
-
-    # Create Journal Entry
+    # -------------------------------
+    # CREATE JOURNAL ENTRY
+    # -------------------------------
     je = frappe.new_doc("Journal Entry")
     je.voucher_type = "Journal Entry"
-    je.posting_date = frappe.utils.today()
     je.company = booking.company
+    je.posting_date = booking.booking_date or frappe.utils.today()
     je.user_remark = f"Payment against Booking {booking.name}"
-    je.cost_center = booking.cost_center  # Assign the selected Cost Center
+    je.cost_center = booking.cost_center
+    je.from_booking_form = 1  # prevent JS auto-overwrite
+
+    # IMPORTANT: assign naming_series if needed; autoname hook will handle it
+    # je.naming_series = "ACC-JV-.YYYY.-"  # optional if you want a default series
 
     # Debit Entry
     je.append("accounts", {
@@ -343,7 +361,8 @@ def make_payment_journal_entry(booking_name):
         "debit_in_account_currency": outstanding,
         "cost_center": booking.cost_center,
         "reference_type": "Booking Form",
-        "reference_name": booking.name
+        "reference_name": booking.name,
+        "is_advance": "Yes"
     })
 
     # Credit Entry
@@ -356,8 +375,14 @@ def make_payment_journal_entry(booking_name):
         "reference_type": "Booking Form",
         "reference_name": booking.name
     })
-    frappe.logger().info(f"Booking Cost Center: {booking.cost_center}")
-    je.insert()
-    # je.submit()  # Uncomment to auto-submit
 
+    # -------------------------------
+    # INSERT AND SUBMIT
+    # -------------------------------
+    je.insert()   # triggers autoname
+    je.submit()   # hooks update Booking Form amount_recieved
+
+    # -------------------------------
+    # RETURN JE NAME
+    # -------------------------------
     return je.name

@@ -1,11 +1,12 @@
 import frappe
-from frappe.utils import getdate
+from frappe.utils import getdate, flt
 from rkg.utils.common import fiscal_year_set
 
-
+# =====================================================
+# AUTONAME FOR JOURNAL ENTRY
+# =====================================================
 def autoname_journal_entry(doc, method=None):
 
-    # 1️⃣ Validate Posting Date
     if not doc.posting_date:
         frappe.throw("Posting Date is required")
 
@@ -14,38 +15,20 @@ def autoname_journal_entry(doc, method=None):
     if not doc.naming_series:
         frappe.throw("Naming Series is required")
 
-    # ---------------------------------------------------
-    # ✅ If series contains YYYY → Let Frappe handle it
-    # ---------------------------------------------------
+    # Let Frappe handle series ending with YYYY
     if "YYYY" in doc.naming_series.upper():
         doc.name = None
         return
 
-    # ---------------------------------------------------
-    # ✅ Custom logic only when YYYY NOT present
-    # ---------------------------------------------------
-
-    # Get Fiscal Year
+    # Custom logic if YYYY not present
     fy = fiscal_year_set(posting_date)
-
     if not fy:
-        frappe.throw(
-            f"Enabled Fiscal Year not found for posting date {posting_date}"
-        )
+        frappe.throw(f"Enabled Fiscal Year not found for posting date {posting_date}")
 
-    fy_code = (
-        f"{str(fy['year_start_date'].year)[-2:]}"
-        f"{str(fy['year_end_date'].year)[-2:]}"
-    )
-
-    # Clean series prefix
+    fy_code = f"{str(fy['year_start_date'].year)[-2:]}{str(fy['year_end_date'].year)[-2:]}"
     series_prefix = doc.naming_series.replace(".", "").strip("-")
-
-    # Final prefix
-    # Example: ACC-TS-2526-
     prefix = f"{series_prefix}-{fy_code}-"
 
-    # Get last sequence
     last = frappe.db.sql(
         """
         SELECT name FROM `tabJournal Entry`
@@ -66,5 +49,45 @@ def autoname_journal_entry(doc, method=None):
     else:
         seq = 1
 
-    # Final name (4 digit sequence)
     doc.name = f"{prefix}{str(seq).zfill(4)}"
+
+
+# =====================================================
+# HOOK FUNCTIONS TO UPDATE BOOKING FORM PAYMENT
+# =====================================================
+def update_booking_amount_recieved(doc, method=None):
+
+    for acc in doc.accounts:
+
+        if (
+            acc.reference_type == "Booking Form"
+            and acc.reference_name
+            and acc.credit_in_account_currency > 0
+        ):
+
+            booking = frappe.get_doc("Booking Form", acc.reference_name)
+
+            payment_amount = flt(acc.credit_in_account_currency)
+
+            new_amount = flt(booking.amount_recieved) + payment_amount
+
+            booking.db_set("amount_recieved", new_amount)
+
+def revert_booking_amount_recieved(doc, method=None):
+
+    for acc in doc.accounts:
+
+        if (
+            acc.reference_type == "Booking Form"
+            and acc.reference_name
+            and acc.credit_in_account_currency > 0
+        ):
+
+            booking = frappe.get_doc("Booking Form", acc.reference_name)
+
+            payment_amount = flt(acc.credit_in_account_currency)
+
+            new_amount = flt(booking.amount_recieved) - payment_amount
+
+            booking.db_set("amount_recieved", new_amount)
+            

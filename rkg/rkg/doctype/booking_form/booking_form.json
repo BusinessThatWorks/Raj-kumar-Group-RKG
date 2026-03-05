@@ -661,6 +661,7 @@
    "label": "Color"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "payment_account",
    "fieldtype": "Select",
    "label": "Accounting",
@@ -682,7 +683,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-04 14:57:36.090512",
+ "modified": "2026-03-05 17:22:57.525071",
  "modified_by": "Administrator",
  "module": "rkg",
  "name": "Booking Form",
