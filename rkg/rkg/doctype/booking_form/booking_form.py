@@ -293,25 +293,17 @@ def make_payment_journal_entry(booking_name):
     # -------------------------------
     if booking.docstatus != 1:
         frappe.throw("Booking must be submitted")
-
     if not booking.payment_account:
         frappe.throw("Payment Account is required")
-
     if not booking.cost_center:
         frappe.throw("Cost Center is required")
-
     if not booking.company:
         frappe.throw("Company is required")
-
     if not frappe.db.exists("Cost Center", booking.cost_center):
         frappe.throw(f"Cost Center {booking.cost_center} does not exist")
-
     if not frappe.db.exists("Company", booking.company):
         frappe.throw(f"Company {booking.company} does not exist")
 
-    # -------------------------------
-    # CALCULATE AMOUNTS
-    # -------------------------------
     total_amount = flt(booking.final_amount)
     already_paid = flt(booking.amount_recieved)
     outstanding = total_amount - already_paid
@@ -324,12 +316,8 @@ def make_payment_journal_entry(booking_name):
     # -------------------------------
     if booking.payment_account == "Cash":
         debit_account = frappe.get_value("Company", booking.company, "default_cash_account")
-        if not debit_account:
-            frappe.throw(f"No default Cash Account set for Company {booking.company}")
     elif booking.payment_account == "Bank":
         debit_account = frappe.get_value("Company", booking.company, "default_bank_account")
-        if not debit_account:
-            frappe.throw(f"No default Bank Account set for Company {booking.company}")
     else:
         frappe.throw(f"Unsupported payment account type: {booking.payment_account}")
 
@@ -338,7 +326,7 @@ def make_payment_journal_entry(booking_name):
         frappe.throw(f"No default Receivable Account set for Company {booking.company}")
 
     # -------------------------------
-    # CREATE JOURNAL ENTRY
+    # CREATE JOURNAL ENTRY DRAFT
     # -------------------------------
     je = frappe.new_doc("Journal Entry")
     je.voucher_type = "Journal Entry"
@@ -348,14 +336,14 @@ def make_payment_journal_entry(booking_name):
     je.cost_center = booking.cost_center
     je.from_booking_form = 1
 
-    # Debit Entry (Cash / Bank)
+    # Debit: Cash / Bank
     je.append("accounts", {
         "account": debit_account,
         "debit_in_account_currency": outstanding,
         "cost_center": booking.cost_center
     })
 
-    # Credit Entry (Debtors / Customer)
+    # Credit: Debtors
     je.append("accounts", {
         "account": receivable_account,
         "party_type": "Customer",
@@ -367,5 +355,8 @@ def make_payment_journal_entry(booking_name):
         "is_advance": "Yes"
     })
 
-    je.insert()
+    je.insert(ignore_permissions=True)  # Keep as Draft
+    frappe.db.commit()
+
+    # Return the Journal Entry name directly
     return je.name

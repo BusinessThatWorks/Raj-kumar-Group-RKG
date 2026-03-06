@@ -517,20 +517,13 @@ function add_make_payment_button(frm) {
     if (frm.doc.docstatus !== 1) return;
 
     frm.add_custom_button("Make Payment", function () {
-        // Prevent double click
-        const btn = $(this);
-        btn.prop("disabled", true);
 
         frappe.call({
             method: "rkg.rkg.doctype.booking_form.booking_form.make_payment_journal_entry",
-            args: {
-                booking_name: frm.doc.name
-            },
+            args: { booking_name: frm.doc.name },
             freeze: true,
             freeze_message: "Creating Journal Entry...",
             callback: function (r) {
-                btn.prop("disabled", false); // re-enable button
-
                 if (r.exc) {
                     frappe.msgprint({
                         title: "Error",
@@ -546,10 +539,10 @@ function add_make_payment_button(frm) {
                         indicator: "green"
                     });
 
-                    // Redirect to the new Journal Entry
+                    // Redirect to the new Journal Entry Draft
                     frappe.set_route("Form", "Journal Entry", r.message);
 
-                    // Optionally reload Booking Form to refresh any payment status
+                    // Refresh Booking Form to update any payment status
                     frm.reload_doc();
                 }
             }
