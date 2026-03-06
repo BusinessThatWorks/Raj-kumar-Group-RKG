@@ -286,10 +286,6 @@ def customer_query(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def make_payment_journal_entry(booking_name):
-    """
-    Create a Journal Entry for the Booking Form payment.
-    Handles Cash or Bank payment account, updates Booking Form amount_recieved via hooks.
-    """
     booking = frappe.get_doc("Booking Form", booking_name)
 
     # -------------------------------
@@ -350,22 +346,16 @@ def make_payment_journal_entry(booking_name):
     je.posting_date = booking.booking_date or frappe.utils.today()
     je.user_remark = f"Payment against Booking {booking.name}"
     je.cost_center = booking.cost_center
-    je.from_booking_form = 1  # prevent JS auto-overwrite
+    je.from_booking_form = 1
 
-    # IMPORTANT: assign naming_series if needed; autoname hook will handle it
-    # je.naming_series = "ACC-JV-.YYYY.-"  # optional if you want a default series
-
-    # Debit Entry
+    # Debit Entry (Cash / Bank)
     je.append("accounts", {
         "account": debit_account,
         "debit_in_account_currency": outstanding,
-        "cost_center": booking.cost_center,
-        "reference_type": "Booking Form",
-        "reference_name": booking.name,
-        "is_advance": "Yes"
+        "cost_center": booking.cost_center
     })
 
-    # Credit Entry
+    # Credit Entry (Debtors / Customer)
     je.append("accounts", {
         "account": receivable_account,
         "party_type": "Customer",
@@ -373,16 +363,9 @@ def make_payment_journal_entry(booking_name):
         "credit_in_account_currency": outstanding,
         "cost_center": booking.cost_center,
         "reference_type": "Booking Form",
-        "reference_name": booking.name
+        "reference_name": booking.name,
+        "is_advance": "Yes"
     })
 
-    # -------------------------------
-    # INSERT AND SUBMIT
-    # -------------------------------
-    je.insert()   # triggers autoname
-    je.submit()   # hooks update Booking Form amount_recieved
-
-    # -------------------------------
-    # RETURN JE NAME
-    # -------------------------------
+    je.insert()
     return je.name

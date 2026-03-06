@@ -62,26 +62,44 @@ def update_booking_amount_recieved(doc, method=None):
         if (
             acc.reference_type == "Booking Form"
             and acc.reference_name
-            and acc.credit_in_account_currency > 0
+            and flt(acc.credit_in_account_currency) > 0
         ):
+
+            if not frappe.db.exists("Booking Form", acc.reference_name):
+                continue
 
             booking = frappe.get_doc("Booking Form", acc.reference_name)
 
             payment_amount = flt(acc.credit_in_account_currency)
 
-            new_amount = flt(booking.amount_recieved) + payment_amount
+            current_amount = flt(booking.amount_recieved)
 
-            booking.db_set("amount_recieved", new_amount)
+            new_amount = current_amount + payment_amount
+
+            frappe.db.set_value(
+                "Booking Form",
+                booking.name,
+                "amount_recieved",
+                new_amount
+            )
 
 def revert_booking_amount_recieved(doc, method=None):
 
     for acc in doc.accounts:
 
+        if acc.is_advance == 1:
+            acc.is_advance = "Yes"
+        elif acc.is_advance == 0:
+            acc.is_advance = "No"
+
         if (
             acc.reference_type == "Booking Form"
             and acc.reference_name
-            and acc.credit_in_account_currency > 0
+            and flt(acc.credit_in_account_currency) > 0
         ):
+
+            if not frappe.db.exists("Booking Form", acc.reference_name):
+                continue
 
             booking = frappe.get_doc("Booking Form", acc.reference_name)
 
@@ -89,5 +107,8 @@ def revert_booking_amount_recieved(doc, method=None):
 
             new_amount = flt(booking.amount_recieved) - payment_amount
 
-            booking.db_set("amount_recieved", new_amount)
-            
+            booking.db_set(
+                "amount_recieved",
+                new_amount,
+                update_modified=False
+            )

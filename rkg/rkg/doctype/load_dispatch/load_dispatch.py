@@ -198,7 +198,7 @@ def read_dispatch_csv(file_url, warehouse=None):
             f"Color           : {item.custom_color}"
         )
 
-        item.end_of_life = add_days(today(), 1)
+        # item.end_of_life = add_days(today(), 1)
 
         tax_percent = float(row["Tax Rate"].replace("%", "").strip())
 
